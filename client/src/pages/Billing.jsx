@@ -3,6 +3,7 @@ import {
   Plus, 
   Search, 
   Printer, 
+  Download,
   CreditCard, 
   ExternalLink, 
   HardDrive,
@@ -10,6 +11,7 @@ import {
   Clock,
   AlertCircle
 } from 'lucide-react';
+import { clientMicroPdf } from '../utils/microPdfGenerator';
 
 export default function Billing({ invoices, onOpenCreate, onPrint, onRecordPayment }) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -151,6 +153,14 @@ export default function Billing({ invoices, onOpenCreate, onPrint, onRecordPayme
                       </span>
                     </td>
                     <td className="py-3.5 px-4 text-right space-x-1.5 whitespace-nowrap">
+                      <button
+                        onClick={() => clientMicroPdf.downloadInvoicePdf(inv)}
+                        title="Download Bill as PDF (< 8 KB)"
+                        className="p-1.5 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition"
+                      >
+                        <Download className="w-4 h-4 inline" />
+                      </button>
+
                       <button
                         onClick={() => onPrint(inv)}
                         title="Print / Micro-PDF Preview"

@@ -84,6 +84,7 @@ $clientFiles = @(
     "client/src/services/billingService.js",
     "client/src/services/inventoryService.js",
     "client/src/services/driveService.js",
+    "client/src/utils/microPdfGenerator.js",
     "client/src/components/InvoiceModal.jsx",
     "client/src/components/StockMovementModal.jsx",
     "client/src/components/PrintBillModal.jsx",

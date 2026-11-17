@@ -1,11 +1,16 @@
 import React from 'react';
-import { X, Printer, HardDrive, ShieldCheck } from 'lucide-react';
+import { X, Printer, Download, HardDrive, ShieldCheck, FileCheck } from 'lucide-react';
+import { clientMicroPdf } from '../utils/microPdfGenerator';
 
 export default function PrintBillModal({ isOpen, onClose, invoice }) {
   if (!isOpen || !invoice) return null;
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleDownloadPdf = () => {
+    clientMicroPdf.downloadInvoicePdf(invoice);
   };
 
   const subtotal = Number(invoice.subtotal || 0);
@@ -22,21 +27,34 @@ export default function PrintBillModal({ isOpen, onClose, invoice }) {
         <div className="bg-slate-900 text-white px-6 py-3.5 flex items-center justify-between no-print">
           <div className="flex items-center space-x-2">
             <span className="text-xs font-semibold px-2 py-0.5 rounded bg-brand-600 text-white uppercase">
-              Micro-PDF Print View
+              Micro-PDF Document
             </span>
-            <span className="text-xs text-slate-400">
-              Size: {invoice.file_size_kb || 5.4} KB
+            <span className="text-xs text-emerald-400 font-mono font-bold flex items-center gap-1">
+              <FileCheck className="w-3.5 h-3.5" />
+              {invoice.file_size_kb || 5.4} KB (.pdf)
             </span>
           </div>
 
           <div className="flex items-center space-x-2">
+            {/* Direct PDF Download Button */}
+            <button
+              onClick={handleDownloadPdf}
+              className="flex items-center space-x-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold transition shadow-sm"
+              title="Download direct PDF file to your device"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Download PDF File</span>
+            </button>
+
+            {/* Print A4 / Thermal Receipt */}
             <button
               onClick={handlePrint}
-              className="flex items-center space-x-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition shadow-sm"
+              className="flex items-center space-x-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition shadow-sm"
             >
               <Printer className="w-3.5 h-3.5" />
               <span>Print A4 / Thermal</span>
             </button>
+
             <button onClick={onClose} className="text-slate-400 hover:text-white transition p-1">
               <X className="w-5 h-5" />
             </button>

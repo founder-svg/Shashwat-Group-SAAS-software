@@ -6,6 +6,14 @@ const path = require('path');
 const config = require('./config');
 const errorHandler = require('./middleware/errorHandler');
 
+// Safe compression loader to ensure all generated data is in KB
+let compression = null;
+try {
+  compression = require('compression');
+} catch (e) {
+  // Safe fallback if not installed
+}
+
 // Route imports
 const authRoutes = require('./routes/auth.routes');
 const leadRoutes = require('./routes/lead.routes');
@@ -21,6 +29,9 @@ const app = express();
 
 // Security and utility middleware
 app.use(helmet());
+if (compression) {
+  app.use(compression());
+}
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

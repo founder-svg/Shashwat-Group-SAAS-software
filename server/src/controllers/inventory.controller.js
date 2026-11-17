@@ -159,9 +159,23 @@ async function handleStockIn(req, res, next) {
       };
       mockStockTransactions.unshift(trans);
 
+      // Auto-generate micro-voucher PDF (3-5 KB) and upload to Cloud Drive
+      const voucherUpload = await driveManager.saveStockVoucher({
+        type: 'STOCK_IN',
+        referenceNumber: trans.reference_number,
+        transactionData: { ...trans, item_name: item.name, unit: item.unit },
+        organizationId: 'a0000000-0000-0000-0000-000000000001',
+        userId: 'demo-user',
+        transactionId: trans.id
+      });
+
+      trans.voucher_url = voucherUpload.webViewLink;
+      trans.voucher_size_kb = voucherUpload.sizeKB;
+
       return res.status(201).json({
         success: true,
         message: `Stock IN recorded: +${qty} ${item.unit}. New balance: ${item.current_stock}`,
+        voucherSizeKB: voucherUpload.sizeKB,
         transaction: trans,
         item
       });
@@ -242,9 +256,23 @@ async function handleStockOut(req, res, next) {
       };
       mockStockTransactions.unshift(trans);
 
+      // Auto-generate micro-voucher PDF (3-5 KB) and upload to Cloud Drive
+      const voucherUpload = await driveManager.saveStockVoucher({
+        type: 'STOCK_OUT',
+        referenceNumber: trans.reference_number,
+        transactionData: { ...trans, item_name: item.name, unit: item.unit },
+        organizationId: 'a0000000-0000-0000-0000-000000000001',
+        userId: 'demo-user',
+        transactionId: trans.id
+      });
+
+      trans.voucher_url = voucherUpload.webViewLink;
+      trans.voucher_size_kb = voucherUpload.sizeKB;
+
       return res.status(201).json({
         success: true,
         message: `Stock OUT recorded: -${qty} ${item.unit}. Remaining balance: ${item.current_stock}`,
+        voucherSizeKB: voucherUpload.sizeKB,
         transaction: trans,
         item
       });

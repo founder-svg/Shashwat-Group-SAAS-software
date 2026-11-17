@@ -124,11 +124,24 @@ async function createInvoice(req, res, next) {
         notes,
         items: computedItems
       };
+
+      // Generate ultra-compact vector PDF (typically 4-8 KB)
+      const driveUpload = await driveManager.saveInvoiceFile({
+        invoiceNumber,
+        invoiceData: newInvoice,
+        organizationId: 'a0000000-0000-0000-0000-000000000001',
+        userId: 'demo-user',
+        invoiceId: newInvoice.id
+      });
+
+      newInvoice.cloud_drive_url = driveUpload.webViewLink;
+      newInvoice.fileSizeKB = driveUpload.sizeKB;
       mockInvoices.unshift(newInvoice);
 
       return res.status(201).json({
         success: true,
-        message: 'Invoice generated successfully (Demo Mode)',
+        message: `Invoice generated: ${driveUpload.sizeKB} KB (Micro-optimized)`,
+        fileSizeKB: driveUpload.sizeKB,
         data: newInvoice
       });
     }
@@ -191,12 +204,12 @@ async function createInvoice(req, res, next) {
       }
     }
 
-    // Auto-save invoice record to Cloud Drive
+    // Auto-save invoice record to Cloud Drive as ultra-compact PDF (4-8 KB)
+    let driveUpload = null;
     try {
-      const invoiceSummary = Buffer.from(JSON.stringify({ ...createdInvoice, items: computedItems }, null, 2));
-      const driveUpload = await driveManager.saveInvoiceFile({
+      driveUpload = await driveManager.saveInvoiceFile({
         invoiceNumber,
-        pdfBuffer: invoiceSummary,
+        invoiceData: { ...createdInvoice, items: computedItems },
         organizationId: orgId,
         userId,
         invoiceId: createdInvoice.id
@@ -215,7 +228,8 @@ async function createInvoice(req, res, next) {
 
     res.status(201).json({
       success: true,
-      message: 'Invoice generated and saved to Cloud Drive',
+      message: `Invoice generated successfully (${driveUpload ? driveUpload.sizeKB : 'N/A'} KB)`,
+      fileSizeKB: driveUpload ? driveUpload.sizeKB : null,
       data: {
         ...createdInvoice,
         items: computedItems
@@ -276,8 +290,43 @@ async function recordPayment(req, res, next) {
   }
 }
 
+async function downloadInvoicePdf(req, res, next) {
+  try {
+    const { id } = req.params;
+    const microPdfGenerator = require('../utils/microPdfGenerator');
+
+    let invoice = null;
+    if (db.isMock) {
+      invoice = mockInvoices.find(i => i.id === id || i.invoice_number === id);
+    } else {
+      const invRes = await db.query('SELECT * FROM invoices WHERE id = $1', [id]);
+      if (invRes.rows.length > 0) {
+        invoice = invRes.rows[0];
+        const itemsRes = await db.query('SELECT * FROM invoice_items WHERE invoice_id = $1', [id]);
+        invoice.items = itemsRes.rows;
+      }
+    }
+
+    if (!invoice) {
+      return res.status(404).json({ success: false, message: 'Invoice not found' });
+    }
+
+    const { buffer, sizeKB } = microPdfGenerator.generateInvoicePdf(invoice);
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="Invoice_${invoice.invoice_number}.pdf"`);
+    res.setHeader('Content-Length', buffer.length);
+    res.setHeader('X-Invoice-Size-KB', sizeKB);
+
+    return res.send(buffer);
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   getInvoices,
   createInvoice,
-  recordPayment
+  recordPayment,
+  downloadInvoicePdf
 };

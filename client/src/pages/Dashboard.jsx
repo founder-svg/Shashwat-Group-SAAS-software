@@ -1,0 +1,202 @@
+import React from 'react';
+import { 
+  IndianRupee, 
+  Boxes, 
+  AlertTriangle, 
+  ArrowDownRight, 
+  ArrowUpRight, 
+  Receipt, 
+  PlusCircle, 
+  HardDrive
+} from 'lucide-react';
+
+export default function Dashboard({ 
+  invoices, 
+  inventory, 
+  transactions, 
+  onOpenInvoice, 
+  onOpenStockMovement,
+  onPrintInvoice 
+}) {
+  const totalBilled = invoices.reduce((acc, i) => acc + (Number(i.total_amount) || 0), 0);
+  const totalPending = invoices.reduce((acc, i) => acc + (Number(i.balance_due) || 0), 0);
+  const lowStockItems = inventory.filter(i => Number(i.current_stock) <= Number(i.min_reorder_level));
+
+  return (
+    <div className="space-y-6">
+      {/* Welcome Banner */}
+      <div className="bg-gradient-to-r from-slate-900 to-brand-800 rounded-2xl p-6 text-white shadow-md flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <span className="px-2.5 py-0.5 text-xs font-bold bg-blue-500/20 text-blue-300 rounded-full border border-blue-400/30">
+            Shashwat Commercial Suite
+          </span>
+          <h2 className="text-xl font-black tracking-tight mt-1.5">
+            Billing, Invoicing & Stock Management
+          </h2>
+          <p className="text-xs text-slate-300 mt-1 max-w-xl">
+            Zero-maintenance BaaS architecture. All customer bills and warehouse vouchers stored automatically in 15 GB Free Cloud Drive in lightweight vector format (< 8 KB).
+          </p>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="flex flex-wrap gap-2.5">
+          <button
+            onClick={onOpenInvoice}
+            className="flex items-center space-x-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold transition shadow-sm"
+          >
+            <PlusCircle className="w-4 h-4" />
+            <span>Generate Bill</span>
+          </button>
+          <button
+            onClick={() => onOpenStockMovement('STOCK_IN')}
+            className="flex items-center space-x-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition shadow-sm"
+          >
+            <ArrowDownRight className="w-4 h-4" />
+            <span>Stock In (Input)</span>
+          </button>
+          <button
+            onClick={() => onOpenStockMovement('STOCK_OUT')}
+            className="flex items-center space-x-1.5 px-3.5 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-xs font-bold transition shadow-sm"
+          >
+            <ArrowUpRight className="w-4 h-4" />
+            <span>Stock Out (Output)</span>
+          </button>
+        </div>
+      </div>
+
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+          <div className="flex justify-between items-start">
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Invoiced</p>
+            <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
+              <IndianRupee className="w-4 h-4" />
+            </div>
+          </div>
+          <p className="text-2xl font-black text-slate-900 mt-2">
+            ₹{totalBilled.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+          </p>
+          <span className="text-[11px] text-slate-500 mt-1 block">
+            {invoices.length} Generated Invoices
+          </span>
+        </div>
+
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+          <div className="flex justify-between items-start">
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Balance Due</p>
+            <div className="p-2 bg-rose-50 text-rose-600 rounded-lg">
+              <Receipt className="w-4 h-4" />
+            </div>
+          </div>
+          <p className="text-2xl font-black text-rose-700 mt-2">
+            ₹{totalPending.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+          </p>
+          <span className="text-[11px] text-rose-600 font-medium mt-1 block">
+            Awaiting Customer Clearance
+          </span>
+        </div>
+
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+          <div className="flex justify-between items-start">
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Stock Catalog</p>
+            <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
+              <Boxes className="w-4 h-4" />
+            </div>
+          </div>
+          <p className="text-2xl font-black text-slate-900 mt-2">
+            {inventory.length} Items
+          </p>
+          <span className="text-[11px] text-slate-500 mt-1 block">
+            Raw Materials & Finished Products
+          </span>
+        </div>
+
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+          <div className="flex justify-between items-start">
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Low Stock Alerts</p>
+            <div className={`p-2 rounded-lg ${lowStockItems.length > 0 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>
+              <AlertTriangle className="w-4 h-4" />
+            </div>
+          </div>
+          <p className={`text-2xl font-black mt-2 ${lowStockItems.length > 0 ? 'text-amber-700' : 'text-slate-900'}`}>
+            {lowStockItems.length} Items
+          </p>
+          <span className="text-[11px] text-slate-500 mt-1 block">
+            At or below reorder threshold
+          </span>
+        </div>
+      </div>
+
+      {/* Two Column Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Recent Invoices */}
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <Receipt className="w-4 h-4 text-brand-600" /> Recent Customer Bills
+            </h3>
+            <span className="text-[11px] text-slate-500 font-mono">Micro-PDF (&lt; 8 KB)</span>
+          </div>
+
+          <div className="divide-y divide-slate-100 text-xs">
+            {invoices.slice(0, 5).map((inv) => (
+              <div key={inv.id} className="py-3 flex justify-between items-center">
+                <div>
+                  <p className="font-bold text-slate-800">{inv.customer_name}</p>
+                  <p className="text-[11px] text-slate-500">{inv.invoice_number} • {inv.invoice_date}</p>
+                </div>
+                <div className="text-right">
+                  <p className="font-bold text-slate-900">₹{Number(inv.total_amount).toFixed(2)}</p>
+                  <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
+                    inv.status === 'PAID' 
+                      ? 'bg-emerald-100 text-emerald-800' 
+                      : inv.status === 'PARTIALLY_PAID'
+                      ? 'bg-amber-100 text-amber-800'
+                      : 'bg-rose-100 text-rose-800'
+                  }`}>
+                    {inv.status}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Recent Stock Movements */}
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <Boxes className="w-4 h-4 text-emerald-600" /> Recent Stock Movements (In/Out)
+            </h3>
+            <span className="text-[11px] text-emerald-600 font-bold">Live Inventory</span>
+          </div>
+
+          <div className="divide-y divide-slate-100 text-xs">
+            {transactions.slice(0, 5).map((t) => {
+              const isStockIn = t.transaction_type === 'STOCK_IN';
+              return (
+                <div key={t.id} className="py-3 flex justify-between items-center">
+                  <div className="flex items-center space-x-2.5">
+                    <div className={`p-1.5 rounded-lg ${isStockIn ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                      {isStockIn ? <ArrowDownRight className="w-3.5 h-3.5" /> : <ArrowUpRight className="w-3.5 h-3.5" />}
+                    </div>
+                    <div>
+                      <p className="font-bold text-slate-800">{t.item_name}</p>
+                      <p className="text-[11px] text-slate-500">{t.party_name} • Ref: {t.reference_number}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className={`font-bold ${isStockIn ? 'text-emerald-700' : 'text-rose-700'}`}>
+                      {isStockIn ? '+' : '-'}{t.quantity} {t.unit}
+                    </p>
+                    <span className="text-[10px] text-slate-400">Bal: {t.balance_after}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

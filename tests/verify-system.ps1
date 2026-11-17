@@ -74,8 +74,31 @@ $gdriveServicePath = "cloud/drive/googleDriveService.js"
 $testResults += Assert-Test "DriveManager module exists" (Test-Path $driveManagerPath) ""
 $testResults += Assert-Test "GoogleDriveService module exists" (Test-Path $gdriveServicePath) ""
 
-# 6. Git Synchronization
-Write-Host "`n🚀 6. Verifying Git Repository Status..." -ForegroundColor Yellow
+# 6. Frontend Client (Option A: BaaS) Verification
+Write-Host "`n🖥️ 6. Verifying Frontend Client Architecture (React + Vite + Supabase)..." -ForegroundColor Yellow
+$clientFiles = @(
+    "client/package.json",
+    "client/vite.config.js",
+    "client/src/App.jsx",
+    "client/src/config/supabaseClient.js",
+    "client/src/services/billingService.js",
+    "client/src/services/inventoryService.js",
+    "client/src/services/driveService.js",
+    "client/src/components/InvoiceModal.jsx",
+    "client/src/components/StockMovementModal.jsx",
+    "client/src/components/PrintBillModal.jsx",
+    "client/src/pages/Dashboard.jsx",
+    "client/src/pages/Billing.jsx",
+    "client/src/pages/Inventory.jsx",
+    "client/src/pages/CloudDrive.jsx"
+)
+foreach ($cf in $clientFiles) {
+    $cExists = Test-Path $cf
+    $testResults += Assert-Test "Client file '$cf' exists" $cExists ""
+}
+
+# 7. Git Synchronization
+Write-Host "`n🚀 7. Verifying Git Repository Status..." -ForegroundColor Yellow
 $gitStatus = & "C:\Users\Professor\AppData\Local\Programs\Git\cmd\git.exe" status --porcelain
 $testResults += Assert-Test "Working tree clean and synchronized" ([string]::IsNullOrWhiteSpace($gitStatus)) ""
 

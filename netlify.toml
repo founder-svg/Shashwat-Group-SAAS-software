@@ -1,16 +1,14 @@
 # ==============================================================================
-# NETLIFY CONFIGURATION FOR SHASHWAT GROUP SAAS CRM
+# NETLIFY DEPLOYMENT CONFIGURATION FOR SHASHWAT GROUP CRM
 # ==============================================================================
 
 [build]
-  # Navigate into the client directory where the React + Vite frontend lives
-  base = "client"
+  command = "cd client && npm install && npm run build"
+  publish = "client/dist"
 
-  # Build the production bundle
-  command = "npm run build"
-
-  # Directory containing the built HTML/JS/CSS assets to publish
-  publish = "dist"
+[build.environment]
+  NODE_VERSION = "20"
+  NPM_FLAGS = "--legacy-peer-deps"
 
 # Single-Page Application (SPA) Routing Rule (prevents 404 on refresh)
 [[redirects]]
@@ -18,7 +16,6 @@
   to = "/index.html"
   status = 200
 
-# Security & Performance Headers
 [[headers]]
   for = "/*"
   [headers.values]

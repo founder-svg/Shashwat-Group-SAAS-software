@@ -1,0 +1,20 @@
+# Render.com Blueprint for Shashwat Group CRM
+# 100% Free Web Service Deployment
+services:
+  - type: web
+    name: shashwat-group-crm-server
+    env: node
+    plan: free
+    buildCommand: cd server && npm install
+    startCommand: cd server && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: STORAGE_PROVIDER
+        value: local
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true

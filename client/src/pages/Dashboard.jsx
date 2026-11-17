@@ -34,7 +34,7 @@ export default function Dashboard({
             Billing, Invoicing & Stock Management
           </h2>
           <p className="text-xs text-slate-300 mt-1 max-w-xl">
-            Zero-maintenance BaaS architecture. All customer bills and warehouse vouchers stored automatically in 15 GB Free Cloud Drive in lightweight vector format (< 8 KB).
+            Zero-maintenance BaaS architecture. All customer bills and warehouse vouchers stored automatically in 15 GB Free Cloud Drive in lightweight vector format (under 8 KB).
           </p>
         </div>
 

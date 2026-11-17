@@ -50,7 +50,7 @@ export default function CloudDrive({ driveFiles }) {
               {totalKB.toFixed(1)} KB Used <span className="text-slate-400 text-sm font-normal">of 15,000,000 KB (15 GB Free)</span>
             </h3>
             <p className="text-xs text-slate-300">
-              Micro-PDF vector compression (< 8 KB/bill) allows storing up to <strong>1,800,000+ customer bills</strong> with zero storage fees!
+              Micro-PDF vector compression (under 8 KB/bill) allows storing up to <strong>1,800,000+ customer bills</strong> with zero storage fees!
             </p>
           </div>
 

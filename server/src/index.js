@@ -13,6 +13,9 @@ const dealRoutes = require('./routes/deal.routes');
 const taskRoutes = require('./routes/task.routes');
 const documentRoutes = require('./routes/document.routes');
 const analyticsRoutes = require('./routes/analytics.routes');
+const inventoryRoutes = require('./routes/inventory.routes');
+const billingRoutes = require('./routes/billing.routes');
+const driveRoutes = require('./routes/drive.routes');
 
 const app = express();
 
@@ -23,17 +26,19 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
 
-// Static serve for local uploads fallback
+// Static serve for local uploads & local drive mirrors
 app.use('/uploads', express.static(path.join(__dirname, '../../cloud/storage/local_uploads')));
+app.use('/drive/files', express.static(path.join(__dirname, '../../cloud/drive/local_drive')));
 
 // Root & Healthcheck Endpoints
 app.get('/', (req, res) => {
   res.json({
     status: 'online',
     project: 'Shashwat Group SaaS & CRM Software',
-    version: '1.0.0',
+    teamLimit: 'Up to 5 Users',
+    modules: ['Billing & Invoicing', 'Inventory & Stock In/Out', 'CRM & Leads', 'Free Cloud Drive (15GB)'],
+    version: '1.1.0',
     timestamp: new Date(),
-    docs: '/api/docs',
     cloudStorageProvider: config.storageProvider
   });
 });
@@ -53,6 +58,9 @@ app.use('/api/deals', dealRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/inventory', inventoryRoutes);
+app.use('/api/billing', billingRoutes);
+app.use('/api/drive', driveRoutes);
 
 // 404 Fallback
 app.use((req, res) => {

@@ -53,11 +53,19 @@ Built from the ground up for zero hosting and database overhead (perfect for bud
 
 ## ⚡ Core Features
 
+- **Team Collaboration (Up to 5 Users)**: Role-based access for Admin, Store Manager, Billing Executive, and Sales Reps.
+- **Billing & Invoicing System**: Professional invoice generation with line items, tax (GST) calculations, auto-generated invoice numbers, payment tracking (Paid, Unpaid, Partial), and instant Cloud Drive sync.
+- **Stock In & Stock Out (Input / Output Tracking)**:
+  - **Stock In**: Log supplier purchases, batch numbers, PO numbers, unit costs, and warehouse incoming goods.
+  - **Stock Out**: Log customer sales, deliveries, dispatch slips, and automatic inventory balance deduction.
+  - **Low Stock Alerts**: Automatic flagging of items dropping below `min_reorder_level`.
+  - **Complete Audit Trail**: Immutable transaction history of all stock movements.
+- **15 GB Free Cloud Drive Storage (Google Drive Integration)**:
+  - Invoices, Stock-In vouchers, and Dispatch challans automatically uploaded and organized into categorized Drive folders.
+  - Direct shareable links for printing or customer sharing without paying for expensive cloud buckets.
 - **Multi-Tenant SaaS Core**: Support multiple branches, business units, or customer accounts under one roof.
 - **Lead & Customer Lifecycle**: Track leads from inbound capture to converted customers with stage tracking and budget estimations.
 - **Deals & Pipeline Management**: Visual deal tracking with stages, win probability, deal value in INR, and expected close dates.
-- **Cloud Document Storage**: Attach proposals, contracts, customer identity documents directly to deals/leads with Cloudinary or Supabase Storage.
-- **Role-Based Access Control (RBAC)**: Superadmin, Manager, and Sales Representative permission levels.
 - **Zero-Cost Cloud Deployment**: Ready for one-click deployment on Render.com free web service.
 
 ---
@@ -66,8 +74,9 @@ Built from the ground up for zero hosting and database overhead (perfect for bud
 
 | Tool | Provider | Purpose | Free Quota |
 |---|---|---|---|
+| **Cloud Drive (Storage)** | [Google Drive API](https://drive.google.com) | Invoices, Stock Slips, Documents | **15 GB Free Lifetime** |
 | **Cloud Database** | [Supabase](https://supabase.com) | PostgreSQL Database | 500 MB DB + Auth |
-| **Media / File Storage** | [Cloudinary](https://cloudinary.com) | Documents, PDFs, Images | 25 GB bandwidth & storage / month |
+| **Media / File CDN** | [Cloudinary](https://cloudinary.com) | Images & Attachments | 25 GB bandwidth & storage / month |
 | **API Server Hosting** | [Render](https://render.com) | Web Service Hosting | 750 free hours / month |
 | **Transactional Email** | [Resend](https://resend.com) | Notifications & Alerts | 3,000 emails / month |
 

@@ -139,6 +139,126 @@ CREATE TABLE IF NOT EXISTS documents (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- ==============================================================================
+-- 9. INVENTORY & STOCK MANAGEMENT (Stock In, Stock Out, Input & Output)
+-- ==============================================================================
+
+-- Products & Inventory Items
+CREATE TABLE IF NOT EXISTS inventory_items (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    sku VARCHAR(100) NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    category VARCHAR(100) DEFAULT 'General',
+    item_type VARCHAR(50) DEFAULT 'finished_good', -- 'raw_material', 'finished_good', 'consumable', 'service'
+    unit VARCHAR(50) DEFAULT 'pcs', -- 'pcs', 'kg', 'meter', 'box', 'liter'
+    cost_price NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+    selling_price NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+    current_stock NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+    min_reorder_level NUMERIC(12, 2) NOT NULL DEFAULT 10.00,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT unique_sku_per_org UNIQUE (organization_id, sku)
+);
+
+-- Stock In / Stock Out / Input / Output Transaction Logs
+CREATE TABLE IF NOT EXISTS stock_transactions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    item_id UUID NOT NULL REFERENCES inventory_items(id) ON DELETE CASCADE,
+    transaction_type VARCHAR(50) NOT NULL, -- 'STOCK_IN', 'STOCK_OUT', 'INPUT', 'OUTPUT', 'ADJUSTMENT'
+    quantity NUMERIC(12, 2) NOT NULL,
+    unit_cost NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+    total_cost NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+    balance_after NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+    reference_number VARCHAR(100), -- Bill/PO/Dispatch slip number
+    batch_lot_number VARCHAR(100),
+    party_name VARCHAR(255), -- Supplier or Customer name
+    notes TEXT,
+    transaction_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ==============================================================================
+-- 10. BILLING & INVOICING SYSTEM
+-- ==============================================================================
+
+-- Invoices Table
+CREATE TABLE IF NOT EXISTS invoices (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    contact_id UUID REFERENCES contacts(id) ON DELETE SET NULL,
+    invoice_number VARCHAR(100) NOT NULL,
+    customer_name VARCHAR(255) NOT NULL,
+    customer_email VARCHAR(255),
+    customer_phone VARCHAR(50),
+    customer_address TEXT,
+    invoice_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    due_date DATE,
+    subtotal NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+    tax_rate NUMERIC(5, 2) DEFAULT 18.00, -- GST / Tax %
+    tax_amount NUMERIC(12, 2) DEFAULT 0.00,
+    discount_amount NUMERIC(12, 2) DEFAULT 0.00,
+    total_amount NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+    amount_paid NUMERIC(12, 2) DEFAULT 0.00,
+    balance_due NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+    status VARCHAR(50) DEFAULT 'ISSUED', -- 'DRAFT', 'ISSUED', 'PARTIALLY_PAID', 'PAID', 'OVERDUE', 'CANCELLED'
+    payment_method VARCHAR(50), -- 'Bank Transfer', 'UPI', 'Cash', 'Cheque', 'Credit'
+    notes TEXT,
+    terms_and_conditions TEXT,
+    cloud_drive_file_id VARCHAR(255),
+    cloud_drive_url TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT unique_invoice_num_per_org UNIQUE (organization_id, invoice_number)
+);
+
+-- Invoice Line Items
+CREATE TABLE IF NOT EXISTS invoice_items (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    invoice_id UUID NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
+    item_id UUID REFERENCES inventory_items(id) ON DELETE SET NULL,
+    item_name VARCHAR(255) NOT NULL,
+    description TEXT,
+    quantity NUMERIC(12, 2) NOT NULL DEFAULT 1.00,
+    unit_price NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+    total_price NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ==============================================================================
+-- 11. FREE CLOUD DRIVE STORAGE (Google Drive / Cloud Drive Sync)
+-- ==============================================================================
+
+CREATE TABLE IF NOT EXISTS drive_files (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    uploaded_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    file_name VARCHAR(255) NOT NULL,
+    file_type VARCHAR(100),
+    folder_category VARCHAR(100) DEFAULT 'general', -- 'invoices', 'stock_in', 'stock_out', 'receipts', 'reports'
+    drive_provider VARCHAR(50) DEFAULT 'google_drive', -- 'google_drive', 'r2', 'supabase', 'local'
+    drive_file_id VARCHAR(255),
+    web_view_link TEXT,
+    download_link TEXT,
+    file_size_bytes BIGINT DEFAULT 0,
+    entity_type VARCHAR(50), -- 'invoice', 'stock_transaction', 'inventory_item'
+    entity_id UUID,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Indexes for inventory and billing
+CREATE INDEX IF NOT EXISTS idx_inventory_org ON inventory_items(organization_id);
+CREATE INDEX IF NOT EXISTS idx_stock_trans_item ON stock_transactions(item_id);
+CREATE INDEX IF NOT EXISTS idx_stock_trans_type ON stock_transactions(transaction_type);
+CREATE INDEX IF NOT EXISTS idx_invoices_org ON invoices(organization_id);
+CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status);
+CREATE INDEX IF NOT EXISTS idx_drive_files_category ON drive_files(folder_category);
+
 -- Indexes for lightning fast queries
 CREATE INDEX IF NOT EXISTS idx_leads_org ON leads(organization_id);
 CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status);

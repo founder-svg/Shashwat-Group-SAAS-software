@@ -46,6 +46,22 @@ Server runs at `http://localhost:5000`.
 - `GET /api/tasks` - List tasks sorted by priority and due date
 - `POST /api/tasks` - Create task assigned to user/lead/deal
 
+### Inventory & Stock Management (Input / Output)
+- `GET /api/inventory/items` - List inventory items (filter by `category`, `itemType`, `lowStockOnly=true`)
+- `POST /api/inventory/items` - Add new product / raw material with SKU and reorder level
+- `POST /api/inventory/stock-in` - Record Stock In (input/purchase) and increase current balance
+- `POST /api/inventory/stock-out` - Record Stock Out (output/dispatch), validates available quantity
+- `GET /api/inventory/transactions` - Audit logs of all inputs and outputs
+
+### Billing & Invoicing
+- `GET /api/billing/invoices` - List invoices (filter by `status`, `search`)
+- `POST /api/billing/invoices` - Generate customer invoice, calculate tax, auto-deduct stock, and auto-sync to Cloud Drive
+- `POST /api/billing/invoices/:id/payment` - Record partial or full payment against invoice
+
+### Free Cloud Drive (Google Drive 15GB Free)
+- `GET /api/drive/files` - List files in Cloud Drive (filter by `folderCategory: invoices | stock_in | stock_out | reports`)
+- `POST /api/drive/upload` - Upload any file directly to Cloud Drive
+
 ### Cloud Documents & Attachments
 - `POST /api/documents/upload` - Upload file (PDF, contract, ID, image) to Cloud Storage (Cloudinary/Supabase/Local)
 - `GET /api/documents` - List uploaded files

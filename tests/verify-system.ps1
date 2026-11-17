@@ -3,7 +3,7 @@
 # ==============================================================================
 
 Write-Host "==========================================================" -ForegroundColor Cyan
-Write-Host "🔍 RUNNING SHASHWAT GROUP CRM BACKEND & CLOUD VERIFICATION" -ForegroundColor Cyan
+Write-Host "[VERIFY] RUNNING SHASHWAT GROUP CRM BACKEND AND CLOUD VERIFICATION" -ForegroundColor Cyan
 Write-Host "==========================================================" -ForegroundColor Cyan
 
 $testResults = @()
@@ -21,7 +21,7 @@ function Assert-Test($testName, $condition, $details) {
 }
 
 # 1. Project Directory Structure Verification
-Write-Host "`n📁 1. Verifying Directory Structure & Critical Modules..." -ForegroundColor Yellow
+Write-Host "`n[1] Verifying Directory Structure and Critical Modules..." -ForegroundColor Yellow
 $dirs = @("database", "database/seeds", "server/src", "server/src/controllers", "server/src/routes", "server/src/utils", "cloud/drive", "cloud/storage", "cloud/deployment", "docs")
 foreach ($dir in $dirs) {
     $exists = Test-Path $dir
@@ -29,7 +29,7 @@ foreach ($dir in $dirs) {
 }
 
 # 2. Database Schema Integrity
-Write-Host "`n🗄️ 2. Verifying Database Schema & SQL Migration Scripts..." -ForegroundColor Yellow
+Write-Host "`n[2] Verifying Database Schema and SQL Migration Scripts..." -ForegroundColor Yellow
 $schemaFile = "database/schema.sql"
 $schemaExists = Test-Path $schemaFile
 $testResults += Assert-Test "database/schema.sql exists" $schemaExists ""
@@ -44,7 +44,7 @@ if ($schemaExists) {
 }
 
 # 3. Micro-PDF Generator & KB Optimization
-Write-Host "`n⚡ 3. Verifying Micro-PDF Engine (< 15 KB guarantee)..." -ForegroundColor Yellow
+Write-Host "`n[3] Verifying Micro-PDF Engine (< 15 KB guarantee)..." -ForegroundColor Yellow
 $pdfGenPath = "server/src/utils/microPdfGenerator.js"
 $pdfGenExists = Test-Path $pdfGenPath
 $testResults += Assert-Test "microPdfGenerator.js exists" $pdfGenExists ""
@@ -59,7 +59,7 @@ if ($pdfGenExists) {
 }
 
 # 4. Server Routes & Controller Mapping
-Write-Host "`n📡 4. Verifying API Routes & Controllers..." -ForegroundColor Yellow
+Write-Host "`n[4] Verifying API Routes and Controllers..." -ForegroundColor Yellow
 $routes = @("auth.routes.js", "lead.routes.js", "deal.routes.js", "task.routes.js", "document.routes.js", "analytics.routes.js", "inventory.routes.js", "billing.routes.js", "drive.routes.js")
 foreach ($r in $routes) {
     $rPath = "server/src/routes/$r"
@@ -68,14 +68,14 @@ foreach ($r in $routes) {
 }
 
 # 5. Cloud Drive Storage Integration
-Write-Host "`n☁️ 5. Verifying Cloud Drive & Storage Providers..." -ForegroundColor Yellow
+Write-Host "`n[5] Verifying Cloud Drive and Storage Providers..." -ForegroundColor Yellow
 $driveManagerPath = "cloud/drive/driveManager.js"
 $gdriveServicePath = "cloud/drive/googleDriveService.js"
 $testResults += Assert-Test "DriveManager module exists" (Test-Path $driveManagerPath) ""
 $testResults += Assert-Test "GoogleDriveService module exists" (Test-Path $gdriveServicePath) ""
 
 # 6. Frontend Client (Option A: BaaS) Verification
-Write-Host "`n🖥️ 6. Verifying Frontend Client Architecture (React + Vite + Supabase)..." -ForegroundColor Yellow
+Write-Host "`n[6] Verifying Frontend Client Architecture (React + Vite + Supabase)..." -ForegroundColor Yellow
 $clientFiles = @(
     "client/package.json",
     "client/vite.config.js",
@@ -100,14 +100,14 @@ foreach ($cf in $clientFiles) {
 }
 
 # 7. Git Synchronization
-Write-Host "`n🚀 7. Verifying Git Repository Status..." -ForegroundColor Yellow
+Write-Host "`n[7] Verifying Git Repository Status..." -ForegroundColor Yellow
 $gitStatus = & "C:\Users\Professor\AppData\Local\Programs\Git\cmd\git.exe" status --porcelain
 $testResults += Assert-Test "Working tree clean and synchronized" ([string]::IsNullOrWhiteSpace($gitStatus)) ""
 
 Write-Host "`n==========================================================" -ForegroundColor Cyan
 if ($errorsCount -eq 0) {
-    Write-Host "✅ ALL BACKEND & CLOUD VERIFICATION CHECKS PASSED (100% READY)" -ForegroundColor Green
+    Write-Host "[SUCCESS] ALL BACKEND AND CLOUD VERIFICATION CHECKS PASSED (100% READY)" -ForegroundColor Green
 } else {
-    Write-Host "❌ $errorsCount VERIFICATION CHECKS FAILED" -ForegroundColor Red
+    Write-Host "[FAILURE] $errorsCount VERIFICATION CHECKS FAILED" -ForegroundColor Red
 }
 Write-Host "==========================================================" -ForegroundColor Cyan

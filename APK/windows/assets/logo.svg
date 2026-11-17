@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" rx="100" fill="#173c6b"/>
+  <path d="M120 180 L256 90 L392 180 L392 390 L120 390 Z" fill="#ffffff" opacity="0.9"/>
+  <rect x="216" y="260" width="80" height="130" fill="#173c6b"/>
+  <text x="256" y="460" font-family="Arial, sans-serif" font-size="40" font-weight="bold" fill="#ffffff" text-anchor="middle">SHASHWAT GROUP</text>
+</svg>

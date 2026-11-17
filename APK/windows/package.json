@@ -1,0 +1,38 @@
+{
+  "name": "shashwat-group-crm-desktop",
+  "version": "1.0.0",
+  "description": "Windows Desktop Application for Shashwat Group SaaS & CRM Software",
+  "main": "main.js",
+  "author": "Shashwat Group Team",
+  "license": "ISC",
+  "scripts": {
+    "start": "electron .",
+    "build:win": "electron-builder --win nsis"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "electron": "^31.4.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.shashwatgroup.crm",
+    "productName": "Shashwat Group CRM",
+    "directories": {
+      "output": "dist-installer"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": "always",
+      "createStartMenuShortcut": true,
+      "shortcutName": "Shashwat Group CRM",
+      "installerIcon": "assets/icon.ico",
+      "uninstallerIcon": "assets/icon.ico",
+      "uninstallDisplayName": "Shashwat Group CRM Software"
+    }
+  }
+}

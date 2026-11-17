@@ -91,7 +91,8 @@ $clientFiles = @(
     "client/src/pages/Dashboard.jsx",
     "client/src/pages/Billing.jsx",
     "client/src/pages/Inventory.jsx",
-    "client/src/pages/CloudDrive.jsx"
+    "client/src/pages/CloudDrive.jsx",
+    "netlify.toml"
 )
 foreach ($cf in $clientFiles) {
     $cExists = Test-Path $cf

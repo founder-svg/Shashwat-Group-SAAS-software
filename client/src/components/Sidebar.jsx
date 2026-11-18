@@ -12,7 +12,7 @@ import {
   Sparkles
 } from 'lucide-react';
 
-export default function Sidebar({ activeTab, setActiveTab }) {
+export default function Sidebar({ activeTab, setActiveTab, firm }) {
   const modules = [
     { id: 'dashboard', number: '1', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'products', number: '2', label: 'Product Management', icon: Package },
@@ -26,21 +26,31 @@ export default function Sidebar({ activeTab, setActiveTab }) {
   return (
     <aside className="w-64 bg-slate-900 text-slate-300 flex flex-col justify-between shrink-0 shadow-xl min-h-[calc(100vh-61px)] border-r border-slate-800">
       <div>
-        {/* Top Left: Client's Company Branding (Shashwat Group) */}
+        {/* Top Left: Active Division / Firm Branding */}
         <div className="p-4 border-b border-slate-800/80 bg-slate-950/40">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white shadow-md shadow-brand-900/30 ring-1 ring-white/10 shrink-0">
-              <Building2 className="w-5 h-5 text-white" />
-            </div>
+            {firm?.logo ? (
+              <div className="w-10 h-10 rounded-xl bg-white/5 border border-slate-700/80 p-1 flex items-center justify-center shrink-0 overflow-hidden shadow-sm">
+                <img
+                  src={firm.logo}
+                  alt={firm.name}
+                  className="max-h-full max-w-full object-contain rounded-lg"
+                />
+              </div>
+            ) : (
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white shadow-md shadow-brand-900/30 ring-1 ring-white/10 shrink-0">
+                <Building2 className="w-5 h-5 text-white" />
+              </div>
+            )}
             <div className="overflow-hidden">
-              <span className="block text-xs font-bold text-amber-400 tracking-wider uppercase">
-                Enterprise Client
+              <span className="block text-[10px] font-mono font-bold text-amber-400 tracking-wider uppercase truncate">
+                {firm?.shortName || 'SHASHWAT'} DIVISION
               </span>
-              <h2 className="text-sm font-black text-white tracking-tight truncate">
-                SHASHWAT GROUP
+              <h2 className="text-xs font-black text-white tracking-tight truncate uppercase">
+                {firm?.name || 'SHASHWAT GROUP'}
               </h2>
               <p className="text-[10px] text-slate-400 truncate">
-                SaaS CRM & Operations
+                {firm?.motto || 'Commercial SaaS ERP'}
               </p>
             </div>
           </div>

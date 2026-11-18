@@ -1,30 +1,68 @@
 import React from 'react';
-import { Building2, CloudCheck, CloudOff, Users } from 'lucide-react';
+import { Building2, CloudCheck, CloudOff, Users, LogOut, RefreshCw, Shield } from 'lucide-react';
 import { isConfigured } from '../config/supabaseClient';
 
-export default function Navbar({ onOpenSetup }) {
+export default function Navbar({ firm, user, onSwitchFirm, onLogout, onOpenSetup }) {
+  const getInitials = (name) => {
+    if (!name) return 'SG';
+    const parts = name.trim().split(' ');
+    if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    return name.substring(0, 2).toUpperCase();
+  };
+
   return (
-    <header className="bg-white border-b border-slate-200 sticky top-0 z-30 px-6 py-3.5">
+    <header className="bg-white border-b border-slate-200 sticky top-0 z-30 px-4 sm:px-6 py-3 shadow-xs">
       <div className="flex items-center justify-between">
+        {/* Top Left: Active Firm Branding */}
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-lg bg-brand-600 flex items-center justify-center text-white shadow-sm">
-            <Building2 className="w-6 h-6" />
-          </div>
+          {firm?.logo ? (
+            <div className="w-11 h-11 rounded-xl bg-slate-50 border border-slate-200 p-1 flex items-center justify-center shrink-0 shadow-xs overflow-hidden">
+              <img
+                src={firm.logo}
+                alt={firm.name}
+                className="max-h-full max-w-full object-contain rounded-lg"
+              />
+            </div>
+          ) : (
+            <div className="w-10 h-10 rounded-xl bg-brand-600 flex items-center justify-center text-white shadow-xs">
+              <Building2 className="w-6 h-6" />
+            </div>
+          )}
+
           <div>
-            <h1 className="text-lg font-bold text-slate-900 tracking-tight leading-none">
-              SHASHWAT GROUP
-            </h1>
-            <p className="text-xs text-slate-500 font-medium mt-0.5">
-              SaaS CRM • Billing • Inventory (Up to 5 Users)
-            </p>
+            <div className="flex items-center gap-2">
+              <h1 className="text-base sm:text-lg font-black text-slate-900 tracking-tight leading-none uppercase">
+                {firm?.name || 'SHASHWAT GROUP'}
+              </h1>
+              {firm?.shortName && (
+                <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full ${firm.badgeColor || 'bg-slate-800 text-white'}`}>
+                  {firm.shortName}
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 mt-0.5">
+              <p className="text-xs text-slate-500 font-medium truncate max-w-xs sm:max-w-md">
+                {firm?.motto || firm?.tagline || 'Commercial SaaS ERP • Up to 5 Users'}
+              </p>
+              <button
+                type="button"
+                onClick={onSwitchFirm}
+                className="inline-flex items-center gap-1 text-[10px] font-semibold text-brand-600 hover:text-brand-800 hover:underline transition"
+                title="Switch business division"
+              >
+                <RefreshCw className="w-2.5 h-2.5" /> Switch
+              </button>
+            </div>
           </div>
         </div>
 
-        <div className="flex items-center space-x-4">
+        {/* Top Right: Status & User Profile */}
+        <div className="flex items-center space-x-3 sm:space-x-4">
           {/* Cloud Database Status Badge */}
           <button
             onClick={onOpenSetup}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition border ${
+            className={`hidden md:flex items-center space-x-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition border ${
               isConfigured
                 ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
                 : 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100'
@@ -33,27 +71,41 @@ export default function Navbar({ onOpenSetup }) {
             {isConfigured ? (
               <>
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span>Supabase Live Connected</span>
+                <span>Supabase Cloud Active</span>
               </>
             ) : (
               <>
                 <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-                <span>Free Cloud Mode (Click to Connect Supabase)</span>
+                <span>Connect Cloud Database</span>
               </>
             )}
           </button>
 
-          {/* Active User Pill */}
-          <div className="flex items-center space-x-2 pl-3 border-l border-slate-200 text-sm">
-            <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center font-bold text-slate-700 text-xs">
-              SG
+          {/* Active Logged-in User Profile */}
+          <div className="flex items-center space-x-2.5 pl-3 border-l border-slate-200">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-600 to-amber-500 text-white flex items-center justify-center font-black text-xs shadow-xs shrink-0 ring-2 ring-white">
+              {getInitials(user?.name || user?.firstName || 'SG')}
             </div>
-            <div className="hidden sm:block text-left leading-tight">
-              <span className="block font-semibold text-slate-800 text-xs">Admin Team</span>
-              <span className="text-[11px] text-slate-500 flex items-center gap-1">
-                <Users className="w-3 h-3 inline" /> 5 User License
+
+            <div className="text-left leading-tight">
+              <span className="block font-bold text-slate-900 text-xs sm:text-sm tracking-tight truncate max-w-[130px] sm:max-w-[180px]">
+                {user?.name || `${user?.firstName || 'Authorized'} ${user?.lastName || 'User'}`}
+              </span>
+              <span className="text-[10px] font-semibold text-slate-500 flex items-center gap-1">
+                <Shield className="w-2.5 h-2.5 text-emerald-600" />
+                {user?.role || 'Administrator'}
               </span>
             </div>
+
+            {/* Logout Button */}
+            <button
+              onClick={onLogout}
+              type="button"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition ml-1"
+              title="Sign Out"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
           </div>
         </div>
       </div>

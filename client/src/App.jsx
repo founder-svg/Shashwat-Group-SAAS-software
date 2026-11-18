@@ -9,6 +9,9 @@ import Inventory from './pages/Inventory';
 import CloudDrive from './pages/CloudDrive';
 import StockTransactions from './pages/StockTransactions';
 
+import FirmSelectionScreen from './components/FirmSelectionScreen';
+import AuthScreen from './components/AuthScreen';
+
 import InvoiceModal from './components/InvoiceModal';
 import StockMovementModal from './components/StockMovementModal';
 import PrintBillModal from './components/PrintBillModal';
@@ -22,6 +25,25 @@ import { vehicleService } from './services/vehicleService';
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   
+  // Layer 1 & 2 Auth & Firm States
+  const [selectedFirm, setSelectedFirm] = useState(() => {
+    try {
+      const stored = localStorage.getItem('shashwat_firm');
+      return stored ? JSON.parse(stored) : null;
+    } catch (e) {
+      return null;
+    }
+  });
+
+  const [user, setUser] = useState(() => {
+    try {
+      const stored = localStorage.getItem('shashwat_user');
+      return stored ? JSON.parse(stored) : null;
+    } catch (e) {
+      return null;
+    }
+  });
+
   // Data states
   const [inventory, setInventory] = useState([]);
   const [invoices, setInvoices] = useState([]);
@@ -38,10 +60,12 @@ export default function App() {
   const [selectedInvoiceForPrint, setSelectedInvoiceForPrint] = useState(null);
   const [isSetupModalOpen, setIsSetupModalOpen] = useState(false);
 
-  // Initial load
+  // Initial load when user and firm are active
   useEffect(() => {
-    loadAllData();
-  }, []);
+    if (selectedFirm && user) {
+      loadAllData();
+    }
+  }, [selectedFirm, user]);
 
   const loadAllData = async () => {
     setLoading(true);
@@ -64,6 +88,29 @@ export default function App() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Auth Flow Handlers
+  const handleSelectFirm = (firm) => {
+    setSelectedFirm(firm);
+    localStorage.setItem('shashwat_firm', JSON.stringify(firm));
+  };
+
+  const handleLoginSuccess = (authenticatedUser, firm) => {
+    setUser(authenticatedUser);
+    setSelectedFirm(firm);
+    localStorage.setItem('shashwat_user', JSON.stringify(authenticatedUser));
+    localStorage.setItem('shashwat_firm', JSON.stringify(firm));
+  };
+
+  const handleSwitchFirm = () => {
+    setSelectedFirm(null);
+    localStorage.removeItem('shashwat_firm');
+  };
+
+  const handleLogout = () => {
+    setUser(null);
+    localStorage.removeItem('shashwat_user');
   };
 
   // Actions
@@ -139,9 +186,38 @@ export default function App() {
     setIsPrintModalOpen(true);
   };
 
+  // --------------------------------------------------------------------------
+  // LAYER 1: Choose Business Division (Shashwat Woods vs Shashwat Ashapura Woods)
+  // --------------------------------------------------------------------------
+  if (!selectedFirm) {
+    return <FirmSelectionScreen onSelectFirm={handleSelectFirm} />;
+  }
+
+  // --------------------------------------------------------------------------
+  // LAYER 2: Authentication / Registration with Gmail OTP & Login
+  // --------------------------------------------------------------------------
+  if (!user) {
+    return (
+      <AuthScreen
+        firm={selectedFirm}
+        onBackToFirms={handleSwitchFirm}
+        onLoginSuccess={handleLoginSuccess}
+      />
+    );
+  }
+
+  // --------------------------------------------------------------------------
+  // LAYER 3: Main Commercial CRM & Operations System (7 Modules)
+  // --------------------------------------------------------------------------
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
-      <Navbar onOpenSetup={() => setIsSetupModalOpen(true)} />
+      <Navbar
+        firm={selectedFirm}
+        user={user}
+        onSwitchFirm={handleSwitchFirm}
+        onLogout={handleLogout}
+        onOpenSetup={() => setIsSetupModalOpen(true)}
+      />
 
       <div className="flex-1 flex">
         {/* Left Sidebar with 7 Modules & Wixfox Branding */}
@@ -153,13 +229,14 @@ export default function App() {
             } else {
               setActiveTab(tab);
             }
-          }} 
+          }}
+          firm={selectedFirm}
         />
 
         <main className="flex-1 p-6 lg:p-8 max-w-7xl mx-auto w-full overflow-y-auto">
           {loading ? (
             <div className="h-64 flex items-center justify-center text-slate-400 text-sm">
-              Loading Shashwat CRM & Operations data...
+              Loading {selectedFirm?.name} operations data...
             </div>
           ) : (
             <>

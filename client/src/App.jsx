@@ -394,10 +394,11 @@ export default function App() {
                 />
               )}
 
-              {/* Module 4: Invoice Bill with Edit & Delete */}
+              {/* Module 4: Invoice Bill with WhatsApp PDF, Edit & Delete */}
               {activeTab === 'billing' && (
                 <Billing
                   invoices={invoices}
+                  firm={selectedFirm}
                   onOpenCreate={() => setIsInvoiceModalOpen(true)}
                   onPrint={openPrintModal}
                   onRecordPayment={handleRecordPayment}
@@ -460,6 +461,7 @@ export default function App() {
         isOpen={isPrintModalOpen}
         onClose={() => setIsPrintModalOpen(false)}
         invoice={selectedInvoiceForPrint}
+        firm={selectedFirm}
       />
     </div>
   );

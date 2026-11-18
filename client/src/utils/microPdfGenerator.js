@@ -63,11 +63,12 @@ class ClientMicroPdfGenerator {
     streamCommands.push(`${lightBg} rg`);
     streamCommands.push(`40 655 515 22 re f`);
     streamCommands.push(`${primaryColor} rg`);
-    streamCommands.push(`BT /F2 9 Tf 50 662 Td (#) Tj ET`);
-    streamCommands.push(`BT /F2 9 Tf 80 662 Td (ITEM DESCRIPTION) Tj ET`);
-    streamCommands.push(`BT /F2 9 Tf 340 662 Td (QTY) Tj ET`);
-    streamCommands.push(`BT /F2 9 Tf 410 662 Td (UNIT PRICE) Tj ET`);
-    streamCommands.push(`BT /F2 9 Tf 490 662 Td (TOTAL) Tj ET`);
+    streamCommands.push(`BT /F2 8 Tf 48 662 Td (#) Tj ET`);
+    streamCommands.push(`BT /F2 8 Tf 70 662 Td (ITEM DESCRIPTION & SPECS) Tj ET`);
+    streamCommands.push(`BT /F2 8 Tf 315 662 Td (PCS) Tj ET`);
+    streamCommands.push(`BT /F2 8 Tf 365 662 Td (CFT) Tj ET`);
+    streamCommands.push(`BT /F2 8 Tf 425 662 Td (RATE) Tj ET`);
+    streamCommands.push(`BT /F2 8 Tf 495 662 Td (AMOUNT) Tj ET`);
 
     // Line Items
     let currentY = 635;
@@ -75,17 +76,28 @@ class ClientMicroPdfGenerator {
 
     items.forEach((item, index) => {
       streamCommands.push(`0 0 0 rg`);
-      streamCommands.push(`BT /F1 9 Tf 50 ${currentY} Td (${index + 1}) Tj ET`);
-      streamCommands.push(`BT /F1 9 Tf 80 ${currentY} Td (${this.escapePdfText(item.item_name || item.itemName)}) Tj ET`);
-      streamCommands.push(`BT /F1 9 Tf 345 ${currentY} Td (${item.quantity || 1}) Tj ET`);
-      streamCommands.push(`BT /F1 9 Tf 415 ${currentY} Td (Rs. ${Number(item.unit_price || item.unitPrice).toFixed(2)}) Tj ET`);
-      streamCommands.push(`BT /F2 9 Tf 490 ${currentY} Td (Rs. ${Number(item.total_price || item.totalPrice).toFixed(2)}) Tj ET`);
+      streamCommands.push(`BT /F1 8 Tf 48 ${currentY} Td (${index + 1}) Tj ET`);
+      
+      let itemTitle = item.item_name || item.itemName || 'Timber Item';
+      if (item.item_description || item.itemDescription) {
+        itemTitle += ` - ${item.item_description || item.itemDescription}`;
+      }
+      if (itemTitle.length > 42) itemTitle = itemTitle.slice(0, 40) + '..';
+
+      streamCommands.push(`BT /F1 8 Tf 70 ${currentY} Td (${this.escapePdfText(itemTitle)}) Tj ET`);
+      const pcs = item.pieces || (item.total_cft ? item.quantity : item.quantity) || 1;
+      streamCommands.push(`BT /F1 8 Tf 320 ${currentY} Td (${pcs}) Tj ET`);
+      const cftVal = item.total_cft || item.totalCft || 0;
+      const cftText = cftVal > 0 ? `${Number(cftVal).toFixed(2)}` : '-';
+      streamCommands.push(`BT /F1 8 Tf 365 ${currentY} Td (${cftText}) Tj ET`);
+      streamCommands.push(`BT /F1 8 Tf 425 ${currentY} Td (Rs. ${Number(item.unit_price || item.unitPrice || 0).toFixed(2)}) Tj ET`);
+      streamCommands.push(`BT /F2 8 Tf 495 ${currentY} Td (Rs. ${Number(item.total_price || item.totalPrice || 0).toFixed(2)}) Tj ET`);
 
       // Row separator
       streamCommands.push(`${borderColor} RG 0.5 w`);
       streamCommands.push(`40 ${currentY - 6} m 555 ${currentY - 6} l S`);
 
-      currentY -= 22;
+      currentY -= 20;
     });
 
     // Summary Box

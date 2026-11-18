@@ -104,23 +104,52 @@ export default function PrintBillModal({ isOpen, onClose, invoice }) {
           <table className="w-full text-left border-collapse mb-5">
             <thead>
               <tr className="border-b border-slate-300 text-slate-700 font-bold text-[11px] bg-slate-100">
-                <th className="py-2 px-3 w-8">#</th>
-                <th className="py-2 px-3">Item Description</th>
-                <th className="py-2 px-3 text-center w-16">Qty</th>
-                <th className="py-2 px-3 text-right w-24">Rate (₹)</th>
-                <th className="py-2 px-3 text-right w-28">Amount (₹)</th>
+                <th className="py-2.5 px-3 w-8">#</th>
+                <th className="py-2.5 px-3">Item Name &amp; Description</th>
+                <th className="py-2.5 px-3 text-center">Dimensions</th>
+                <th className="py-2.5 px-3 text-center w-20">Pieces</th>
+                <th className="py-2.5 px-3 text-center w-24">Total CFT</th>
+                <th className="py-2.5 px-3 text-right w-24">Rate (₹)</th>
+                <th className="py-2.5 px-3 text-right w-28">Amount (₹)</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 text-[11px]">
-              {(invoice.items || []).map((it, idx) => (
-                <tr key={idx}>
-                  <td className="py-2 px-3 text-slate-500">{idx + 1}</td>
-                  <td className="py-2 px-3 font-semibold text-slate-900">{it.item_name}</td>
-                  <td className="py-2 px-3 text-center">{it.quantity}</td>
-                  <td className="py-2 px-3 text-right">{Number(it.unit_price).toFixed(2)}</td>
-                  <td className="py-2 px-3 text-right font-bold text-slate-900">{Number(it.total_price).toFixed(2)}</td>
-                </tr>
-              ))}
+              {(invoice.items || []).map((it, idx) => {
+                const pcs = it.pieces || (it.total_cft ? it.quantity : it.quantity) || 1;
+                const cftVal = it.total_cft || it.totalCft || 0;
+                const dims = (it.length || it.width || it.thickness) 
+                  ? `${it.length || 0}L × ${it.width || 0}W × ${it.thickness || 0}T`
+                  : null;
+
+                return (
+                  <tr key={idx}>
+                    <td className="py-2.5 px-3 text-slate-500">{idx + 1}</td>
+                    <td className="py-2.5 px-3">
+                      <p className="font-bold text-slate-900">{it.item_name || it.itemName}</p>
+                      {(it.item_description || it.itemDescription) && (
+                        <p className="text-[10px] text-slate-500 mt-0.5">
+                          {it.item_description || it.itemDescription}
+                        </p>
+                      )}
+                    </td>
+                    <td className="py-2.5 px-3 text-center font-mono text-[10px] text-slate-600">
+                      {dims || '-'}
+                    </td>
+                    <td className="py-2.5 px-3 text-center font-bold text-slate-800">
+                      {pcs} Pcs
+                    </td>
+                    <td className="py-2.5 px-3 text-center font-mono font-bold text-emerald-700">
+                      {cftVal > 0 ? `${Number(cftVal).toFixed(3)} CFT` : '-'}
+                    </td>
+                    <td className="py-2.5 px-3 text-right font-medium">
+                      ₹{Number(it.unit_price || it.unitPrice || 0).toFixed(2)}
+                    </td>
+                    <td className="py-2.5 px-3 text-right font-black text-slate-900">
+                      ₹{Number(it.total_price || it.totalPrice || 0).toFixed(2)}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
 

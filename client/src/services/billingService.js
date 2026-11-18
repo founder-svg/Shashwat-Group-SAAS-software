@@ -24,6 +24,24 @@ export const billingService = {
       .from('invoices')
       .select('*, invoice_items(*)')
       .order('invoice_date', { ascending: false });
+
+    // Map invoice_items to items for consistent frontend usage
+    if (data) {
+      data.forEach(inv => {
+        if (inv.invoice_items && !inv.items) {
+          inv.items = inv.invoice_items.map(it => ({
+            ...it,
+            itemName: it.item_name,
+            itemDescription: it.item_description || '',
+            unitPrice: it.unit_price,
+            totalPrice: it.total_price,
+            pieces: it.pieces || it.quantity || 1,
+            totalCft: it.total_cft || 0
+          }));
+        }
+      });
+    }
+
     return { data, error };
   },
 
@@ -43,20 +61,32 @@ export const billingService = {
       autoDeductStock = true
     } = invoiceInput;
 
-    // Calculate totals
+    // Calculate totals & enrich timber fields
     let subtotal = 0;
     const computedItems = items.map((it, idx) => {
-      const qty = parseFloat(it.quantity) || 1;
+      const pcs = parseFloat(it.pieces) || 1;
+      const totCft = parseFloat(it.totalCft) || 0;
       const price = parseFloat(it.unitPrice) || 0;
-      const total = qty * price;
-      subtotal += total;
+      const rowTotal = it.totalPrice !== undefined 
+        ? parseFloat(it.totalPrice) 
+        : (totCft > 0 ? totCft * price : pcs * price);
+
+      subtotal += rowTotal;
+
       return {
         id: `item-${Date.now()}-${idx}`,
         item_id: it.itemId || null,
         item_name: it.itemName,
-        quantity: qty,
+        item_description: it.itemDescription || '',
+        length: parseFloat(it.length) || 0,
+        width: parseFloat(it.width) || 0,
+        thickness: parseFloat(it.thickness) || 0,
+        cft: parseFloat(it.cft) || 0,
+        pieces: pcs,
+        total_cft: totCft,
+        quantity: totCft > 0 ? totCft : pcs,
         unit_price: price,
-        total_price: total
+        total_price: rowTotal
       };
     });
 
@@ -85,7 +115,7 @@ export const billingService = {
         status: 'ISSUED',
         payment_method: paymentMethod,
         notes: notes || '',
-        file_size_kb: 5.8, // Micro-PDF size
+        file_size_kb: 5.6, // Micro-PDF size strictly in KB
         drive_file_url: 'https://drive.google.com',
         items: computedItems
       };
@@ -102,7 +132,7 @@ export const billingService = {
               quantity: it.quantity,
               referenceNumber: invoiceNumber,
               partyName: customerName,
-              notes: 'Auto-deducted from sales invoice'
+              notes: `Auto-deducted for ${customerName} (${it.pieces} pcs)`
             });
           }
         }
@@ -138,15 +168,26 @@ export const billingService = {
 
     if (invErr) return { error: invErr };
 
-    // Insert line items
-    const lineItemRows = computedItems.map(it => ({
-      invoice_id: invData.id,
-      item_id: it.item_id,
-      item_name: it.item_name,
-      quantity: it.quantity,
-      unit_price: it.unit_price,
-      total_price: it.total_price
-    }));
+    // Insert line items with resilient column mapping
+    const lineItemRows = computedItems.map(it => {
+      // If item description exists, ensure it is preserved
+      let displayName = it.item_name;
+      if (it.item_description) {
+        displayName = `${it.item_name} (${it.item_description})`;
+      }
+      if (it.pieces && it.total_cft) {
+        displayName += ` [${it.pieces} Pcs | ${it.total_cft} CFT]`;
+      }
+
+      return {
+        invoice_id: invData.id,
+        item_id: it.item_id,
+        item_name: displayName,
+        quantity: it.quantity,
+        unit_price: it.unit_price,
+        total_price: it.total_price
+      };
+    });
 
     await supabase.from('invoice_items').insert(lineItemRows);
 
@@ -159,27 +200,37 @@ export const billingService = {
             quantity: it.quantity,
             referenceNumber: invoiceNumber,
             partyName: customerName,
-            notes: 'Auto-deducted from sales invoice'
+            notes: `Auto-deducted for ${customerName} (${it.pieces} pcs)`
           });
         }
       }
     }
 
-    return { data: { ...invData, items: computedItems }, error: null };
+    const completeInvoice = {
+      ...invData,
+      items: computedItems,
+      file_size_kb: 5.6
+    };
+
+    return { data: completeInvoice, error: null };
   },
 
   async recordPayment(invoiceId, amount, paymentMethod = 'Bank Transfer') {
-    const payAmt = parseFloat(amount);
+    const payVal = parseFloat(amount);
+    if (!payVal || payVal <= 0) return { error: { message: 'Invalid payment amount' } };
 
     if (!isConfigured) {
       const invoices = getCachedInvoices();
       const inv = invoices.find(i => i.id === invoiceId);
       if (!inv) return { error: { message: 'Invoice not found' } };
 
-      inv.amount_paid = (parseFloat(inv.amount_paid) || 0) + payAmt;
-      inv.balance_due = Math.max(0, parseFloat(inv.total_amount) - inv.amount_paid);
-      inv.status = inv.balance_due === 0 ? 'PAID' : 'PARTIALLY_PAID';
-      inv.payment_method = paymentMethod;
+      inv.amount_paid = Number(inv.amount_paid || 0) + payVal;
+      inv.balance_due = Math.max(0, Number(inv.total_amount) - inv.amount_paid);
+      if (inv.balance_due === 0) {
+        inv.status = 'PAID';
+      } else if (inv.amount_paid > 0) {
+        inv.status = 'PARTIALLY_PAID';
+      }
 
       saveCachedInvoices(invoices);
       return { data: inv, error: null };
@@ -193,15 +244,15 @@ export const billingService = {
 
     if (fetchErr) return { error: fetchErr };
 
-    const newPaid = (parseFloat(inv.amount_paid) || 0) + payAmt;
-    const newBalance = Math.max(0, parseFloat(inv.total_amount) - newPaid);
-    const newStatus = newBalance === 0 ? 'PAID' : 'PARTIALLY_PAID';
+    const newAmountPaid = Number(inv.amount_paid || 0) + payVal;
+    const newBalanceDue = Math.max(0, Number(inv.total_amount) - newAmountPaid);
+    const newStatus = newBalanceDue === 0 ? 'PAID' : (newAmountPaid > 0 ? 'PARTIALLY_PAID' : inv.status);
 
-    const { data: updated, error: updateErr } = await supabase
+    const { data, error } = await supabase
       .from('invoices')
       .update({
-        amount_paid: newPaid,
-        balance_due: newBalance,
+        amount_paid: newAmountPaid,
+        balance_due: newBalanceDue,
         status: newStatus,
         payment_method: paymentMethod,
         updated_at: new Date()
@@ -210,6 +261,6 @@ export const billingService = {
       .select()
       .single();
 
-    return { data: updated, error: updateErr };
+    return { data, error };
   }
 };

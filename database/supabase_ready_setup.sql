@@ -21,16 +21,20 @@ INSERT INTO organizations (id, name, slug)
 VALUES ('a0000000-0000-0000-0000-000000000001', 'Shashwat Group HQ', 'shashwat-group')
 ON CONFLICT (slug) DO NOTHING;
 
--- 3. Inventory & Stock Master Table
+-- 3. Inventory & Stock Master Table (Wood & Timber Sizing)
 CREATE TABLE IF NOT EXISTS inventory_items (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     organization_id UUID NOT NULL DEFAULT 'a0000000-0000-0000-0000-000000000001',
     sku VARCHAR(100) NOT NULL,
     name VARCHAR(255) NOT NULL,
     description TEXT,
-    category VARCHAR(100) DEFAULT 'General',
+    length NUMERIC(10, 2) DEFAULT 0.00,
+    width NUMERIC(10, 2) DEFAULT 0.00,
+    thickness NUMERIC(10, 2) DEFAULT 0.00,
+    cft NUMERIC(10, 3) DEFAULT 0.000,
+    category VARCHAR(100) DEFAULT 'Teak Wood',
     item_type VARCHAR(50) DEFAULT 'finished_good', -- 'raw_material', 'finished_good', 'consumable'
-    unit VARCHAR(50) DEFAULT 'pcs', -- 'pcs', 'kg', 'meter', 'box', 'liter'
+    unit VARCHAR(50) DEFAULT 'CFT', -- 'CFT', 'pcs', 'sqft', 'meter'
     cost_price NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
     selling_price NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
     current_stock NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
@@ -39,6 +43,12 @@ CREATE TABLE IF NOT EXISTS inventory_items (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Quick Alter for existing databases
+ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS length NUMERIC(10, 2) DEFAULT 0.00;
+ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS width NUMERIC(10, 2) DEFAULT 0.00;
+ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS thickness NUMERIC(10, 2) DEFAULT 0.00;
+ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS cft NUMERIC(10, 3) DEFAULT 0.000;
 
 -- 4. Stock In / Stock Out Movement Logs
 CREATE TABLE IF NOT EXISTS stock_transactions (
@@ -84,17 +94,33 @@ CREATE TABLE IF NOT EXISTS invoices (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- 6. Invoice Line Items Table
+-- 6. Invoice Line Items Table (Wood Pieces & CFT)
 CREATE TABLE IF NOT EXISTS invoice_items (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     invoice_id UUID NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
     item_id UUID REFERENCES inventory_items(id) ON DELETE SET NULL,
     item_name VARCHAR(255) NOT NULL,
+    item_description TEXT,
+    length NUMERIC(10, 2) DEFAULT 0.00,
+    width NUMERIC(10, 2) DEFAULT 0.00,
+    thickness NUMERIC(10, 2) DEFAULT 0.00,
+    cft NUMERIC(10, 3) DEFAULT 0.000,
+    pieces NUMERIC(10, 2) DEFAULT 1.00,
+    total_cft NUMERIC(12, 3) DEFAULT 0.000,
     quantity NUMERIC(12, 2) NOT NULL DEFAULT 1.00,
     unit_price NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
     total_price NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Quick Alter for existing databases
+ALTER TABLE invoice_items ADD COLUMN IF NOT EXISTS item_description TEXT;
+ALTER TABLE invoice_items ADD COLUMN IF NOT EXISTS length NUMERIC(10, 2) DEFAULT 0.00;
+ALTER TABLE invoice_items ADD COLUMN IF NOT EXISTS width NUMERIC(10, 2) DEFAULT 0.00;
+ALTER TABLE invoice_items ADD COLUMN IF NOT EXISTS thickness NUMERIC(10, 2) DEFAULT 0.00;
+ALTER TABLE invoice_items ADD COLUMN IF NOT EXISTS cft NUMERIC(10, 3) DEFAULT 0.000;
+ALTER TABLE invoice_items ADD COLUMN IF NOT EXISTS pieces NUMERIC(10, 2) DEFAULT 1.00;
+ALTER TABLE invoice_items ADD COLUMN IF NOT EXISTS total_cft NUMERIC(12, 3) DEFAULT 0.000;
 
 -- 7. Cloud Drive Documents Metadata Table
 CREATE TABLE IF NOT EXISTS drive_files (

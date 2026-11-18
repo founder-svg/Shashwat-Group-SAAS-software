@@ -28,39 +28,113 @@ function saveCachedTransactions(list) {
   localStorage.setItem(LOCAL_TRANS_KEY, JSON.stringify(list));
 }
 
+import { parseSpecsFromDescription } from '../utils/woodCalculator';
+
+function enrichItemWithWoodSpecs(item) {
+  if (!item) return item;
+  if (item.length !== undefined && item.cft !== undefined) return item;
+  const parsed = parseSpecsFromDescription(item.description);
+  if (parsed) {
+    return {
+      ...item,
+      length: item.length || parsed.length,
+      width: item.width || parsed.width,
+      thickness: item.thickness || parsed.thickness,
+      cft: item.cft || parsed.cft
+    };
+  }
+  return item;
+}
+
 export const inventoryService = {
   async getItems() {
     if (!isConfigured) {
-      return { data: getCachedItems(), error: null };
+      const items = getCachedItems().map(enrichItemWithWoodSpecs);
+      return { data: items, error: null };
     }
     const { data, error } = await supabase
       .from('inventory_items')
       .select('*')
       .order('name', { ascending: true });
-    return { data, error };
+
+    const enriched = (data || []).map(enrichItemWithWoodSpecs);
+    return { data: enriched, error };
   },
 
   async addItem(item) {
+    // Format description with dimensions spec if available
+    let formattedDesc = item.description || '';
+    if (item.length && item.width && item.thickness) {
+      const specTag = `[Specs: ${item.length}L × ${item.width}W × ${item.thickness}T | ${item.cft || 0} CFT]`;
+      if (!formattedDesc.includes('[Specs:')) {
+        formattedDesc = formattedDesc ? `${formattedDesc} ${specTag}` : specTag;
+      }
+    }
+
+    const payload = {
+      ...item,
+      description: formattedDesc,
+      current_stock: Number(item.initial_stock || item.current_stock) || 0,
+      cost_price: Number(item.cost_price) || 0,
+      selling_price: Number(item.selling_price) || 0,
+      min_reorder_level: Number(item.min_reorder_level) || 10
+    };
+
     if (!isConfigured) {
       const items = getCachedItems();
       const newItem = {
-        ...item,
-        id: `local-${Date.now()}`,
-        current_stock: Number(item.initial_stock) || 0,
-        cost_price: Number(item.cost_price) || 0,
-        selling_price: Number(item.selling_price) || 0,
-        min_reorder_level: Number(item.min_reorder_level) || 10
+        ...payload,
+        id: `local-${Date.now()}`
       };
       items.push(newItem);
       saveCachedItems(items);
       return { data: newItem, error: null };
     }
-    const { data, error } = await supabase
+
+    // Try inserting full payload with wood dimension columns
+    let { data, error } = await supabase
       .from('inventory_items')
-      .insert([item])
+      .insert([payload])
       .select()
       .single();
-    return { data, error };
+
+    // Fallback if Supabase table doesn't have the new dimension columns yet
+    if (error && (error.message?.includes('column') || error.code === '42703')) {
+      const standardPayload = {
+        sku: payload.sku,
+        name: payload.name,
+        description: payload.description,
+        category: payload.category || 'General',
+        item_type: payload.item_type || 'finished_good',
+        unit: payload.unit || 'pcs',
+        cost_price: payload.cost_price,
+        selling_price: payload.selling_price,
+        current_stock: payload.current_stock,
+        min_reorder_level: payload.min_reorder_level
+      };
+
+      const fallbackRes = await supabase
+        .from('inventory_items')
+        .insert([standardPayload])
+        .select()
+        .single();
+
+      if (fallbackRes.data) {
+        return {
+          data: {
+            ...fallbackRes.data,
+            length: payload.length,
+            width: payload.width,
+            thickness: payload.thickness,
+            cft: payload.cft
+          },
+          error: null
+        };
+      }
+      return fallbackRes;
+    }
+
+    return { data: enrichItemWithWoodSpecs(data), error };
   },
 
   async stockIn({ itemId, quantity, unitCost, referenceNumber, partyName, notes }) {

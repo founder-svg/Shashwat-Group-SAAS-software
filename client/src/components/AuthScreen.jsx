@@ -3,7 +3,6 @@ import {
   Lock, Mail, User, Phone, Briefcase, ArrowLeft, KeyRound, 
   CheckCircle2, AlertCircle, Sparkles, ShieldCheck, Eye, EyeOff 
 } from 'lucide-react';
-import { EMPLOYEE_ROLES } from '../constants/firms';
 import { supabase, isConfigured } from '../config/supabaseClient';
 
 export default function AuthScreen({ firm, onBackToFirms, onLoginSuccess }) {
@@ -18,7 +17,7 @@ export default function AuthScreen({ firm, onBackToFirms, onLoginSuccess }) {
   // Form states
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
-  const [role, setRole] = useState(EMPLOYEE_ROLES[0]);
+  const [role, setRole] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -83,6 +82,10 @@ export default function AuthScreen({ firm, onBackToFirms, onLoginSuccess }) {
 
     if (!firstName.trim() || !lastName.trim()) {
       setErrorMsg('Please enter both First Name and Last Name.');
+      return;
+    }
+    if (!role.trim()) {
+      setErrorMsg('Please enter your Employee Role.');
       return;
     }
     if (!phone.trim()) {
@@ -487,17 +490,14 @@ export default function AuthScreen({ firm, onBackToFirms, onLoginSuccess }) {
                 </label>
                 <div className="relative">
                   <Briefcase className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
-                  <select
+                  <input
+                    type="text"
+                    required
                     value={role}
                     onChange={(e) => setRole(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-amber-500"
-                  >
-                    {EMPLOYEE_ROLES.map((r) => (
-                      <option key={r} value={r} className="bg-slate-900 text-white">
-                        {r}
-                      </option>
-                    ))}
-                  </select>
+                    placeholder="Type your employee role (e.g. Accounts Manager, Timber Sizing Lead)"
+                    className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500"
+                  />
                 </div>
               </div>
 

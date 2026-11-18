@@ -2,10 +2,13 @@ import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
+import ProductManagement from './pages/ProductManagement';
+import VehicleManagement from './pages/VehicleManagement';
 import Billing from './pages/Billing';
 import Inventory from './pages/Inventory';
-import StockTransactions from './pages/StockTransactions';
 import CloudDrive from './pages/CloudDrive';
+import StockTransactions from './pages/StockTransactions';
+
 import InvoiceModal from './components/InvoiceModal';
 import StockMovementModal from './components/StockMovementModal';
 import PrintBillModal from './components/PrintBillModal';
@@ -14,6 +17,7 @@ import SupabaseSetupModal from './components/SupabaseSetupModal';
 import { inventoryService } from './services/inventoryService';
 import { billingService } from './services/billingService';
 import { driveService } from './services/driveService';
+import { vehicleService } from './services/vehicleService';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -23,6 +27,7 @@ export default function App() {
   const [invoices, setInvoices] = useState([]);
   const [transactions, setTransactions] = useState([]);
   const [driveFiles, setDriveFiles] = useState([]);
+  const [vehicles, setVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Modal states
@@ -41,17 +46,19 @@ export default function App() {
   const loadAllData = async () => {
     setLoading(true);
     try {
-      const [invRes, billRes, transRes, driveRes] = await Promise.all([
+      const [invRes, billRes, transRes, driveRes, vehRes] = await Promise.all([
         inventoryService.getItems(),
         billingService.getInvoices(),
         inventoryService.getTransactions(),
-        driveService.getFiles()
+        driveService.getFiles(),
+        vehicleService.getVehicles()
       ]);
 
       if (invRes.data) setInventory(invRes.data);
       if (billRes.data) setInvoices(billRes.data);
       if (transRes.data) setTransactions(transRes.data);
       if (driveRes.data) setDriveFiles(driveRes.data);
+      if (vehRes.data) setVehicles(vehRes.data);
     } catch (err) {
       console.error('Data loading error:', err);
     } finally {
@@ -63,9 +70,7 @@ export default function App() {
   const handleCreateInvoice = async (invoiceData) => {
     const res = await billingService.createInvoice(invoiceData);
     if (res.data) {
-      // Refresh state
       loadAllData();
-      // Auto open print modal
       setSelectedInvoiceForPrint(res.data);
       setIsPrintModalOpen(true);
     } else if (res.error) {
@@ -106,6 +111,24 @@ export default function App() {
     }
   };
 
+  const handleAddVehicle = async (vehicleData) => {
+    const res = await vehicleService.addVehicle(vehicleData);
+    if (res.data) {
+      loadAllData();
+    } else if (res.error) {
+      alert(`Error adding vehicle: ${res.error.message}`);
+    }
+  };
+
+  const handleUpdateVehicleStatus = async (id, status, currentDestination) => {
+    const res = await vehicleService.updateStatus(id, status, currentDestination);
+    if (res.data) {
+      loadAllData();
+    } else if (res.error) {
+      alert(`Error updating vehicle: ${res.error.message}`);
+    }
+  };
+
   const openStockModal = (type = 'STOCK_IN') => {
     setStockModalType(type);
     setIsStockModalOpen(true);
@@ -121,21 +144,26 @@ export default function App() {
       <Navbar onOpenSetup={() => setIsSetupModalOpen(true)} />
 
       <div className="flex-1 flex">
-        <Sidebar activeTab={activeTab} setActiveTab={(tab) => {
-          if (tab === 'setup') {
-            setIsSetupModalOpen(true);
-          } else {
-            setActiveTab(tab);
-          }
-        }} />
+        {/* Left Sidebar with 7 Modules & Wixfox Branding */}
+        <Sidebar 
+          activeTab={activeTab} 
+          setActiveTab={(tab) => {
+            if (tab === 'setup') {
+              setIsSetupModalOpen(true);
+            } else {
+              setActiveTab(tab);
+            }
+          }} 
+        />
 
         <main className="flex-1 p-6 lg:p-8 max-w-7xl mx-auto w-full overflow-y-auto">
           {loading ? (
             <div className="h-64 flex items-center justify-center text-slate-400 text-sm">
-              Loading Shashwat CRM & Inventory data...
+              Loading Shashwat CRM & Operations data...
             </div>
           ) : (
             <>
+              {/* Module 1: Dashboard */}
               {activeTab === 'dashboard' && (
                 <Dashboard
                   invoices={invoices}
@@ -147,6 +175,24 @@ export default function App() {
                 />
               )}
 
+              {/* Module 2: Product Management */}
+              {activeTab === 'products' && (
+                <ProductManagement
+                  inventory={inventory}
+                  onAddItem={handleAddItem}
+                />
+              )}
+
+              {/* Module 3: Vehicle Management */}
+              {activeTab === 'vehicles' && (
+                <VehicleManagement
+                  vehicles={vehicles}
+                  onAddVehicle={handleAddVehicle}
+                  onUpdateStatus={handleUpdateVehicleStatus}
+                />
+              )}
+
+              {/* Module 4: Invoice Bill */}
               {activeTab === 'billing' && (
                 <Billing
                   invoices={invoices}
@@ -156,6 +202,7 @@ export default function App() {
                 />
               )}
 
+              {/* Module 5: Inventory Management */}
               {activeTab === 'inventory' && (
                 <Inventory
                   inventory={inventory}
@@ -164,12 +211,14 @@ export default function App() {
                 />
               )}
 
-              {activeTab === 'transactions' && (
-                <StockTransactions transactions={transactions} />
+              {/* Module 6: DATA */}
+              {activeTab === 'data' && (
+                <CloudDrive driveFiles={driveFiles} />
               )}
 
-              {activeTab === 'drive' && (
-                <CloudDrive driveFiles={driveFiles} />
+              {/* Module 7: History */}
+              {activeTab === 'history' && (
+                <StockTransactions transactions={transactions} />
               )}
             </>
           )}

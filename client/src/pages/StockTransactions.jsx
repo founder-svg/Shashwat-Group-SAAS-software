@@ -24,9 +24,14 @@ export default function StockTransactions({ transactions }) {
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="text-xl font-bold text-slate-900 tracking-tight">Stock Movement & Input/Output Audit Log</h2>
-        <p className="text-xs text-slate-500">
-          Permanent history of all inward warehouse receipts (Stock In) and outward dispatches (Stock Out).
+        <div className="flex items-center space-x-2">
+          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-brand-100 text-brand-800">
+            MODULE 7
+          </span>
+          <h2 className="text-xl font-bold text-slate-900 tracking-tight">History (Stock Movement & Activity Audit)</h2>
+        </div>
+        <p className="text-xs text-slate-500 mt-0.5">
+          Permanent history of all inward warehouse receipts (Stock In), outward dispatches (Stock Out), and inventory audits.
         </p>
       </div>
 

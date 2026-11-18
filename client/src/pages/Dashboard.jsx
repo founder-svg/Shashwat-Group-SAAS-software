@@ -27,11 +27,14 @@ export default function Dashboard({
       {/* Welcome Banner */}
       <div className="bg-gradient-to-r from-slate-900 to-brand-800 rounded-2xl p-6 text-white shadow-md flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <span className="px-2.5 py-0.5 text-xs font-bold bg-blue-500/20 text-blue-300 rounded-full border border-blue-400/30">
-            Shashwat Commercial Suite
-          </span>
+          <div className="flex items-center space-x-2">
+            <span className="px-2.5 py-0.5 text-xs font-bold bg-blue-500/20 text-blue-300 rounded-full border border-blue-400/30">
+              MODULE 1
+            </span>
+            <span className="text-xs font-semibold text-slate-300">Shashwat Commercial Suite</span>
+          </div>
           <h2 className="text-xl font-black tracking-tight mt-1.5">
-            Billing, Invoicing & Stock Management
+            Command Center Dashboard
           </h2>
           <p className="text-xs text-slate-300 mt-1 max-w-xl">
             Zero-maintenance BaaS architecture. All customer bills and warehouse vouchers stored automatically in 15 GB Free Cloud Drive in lightweight vector format (under 8 KB).

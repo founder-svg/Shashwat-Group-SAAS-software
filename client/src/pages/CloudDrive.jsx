@@ -33,9 +33,14 @@ export default function CloudDrive({ driveFiles }) {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h2 className="text-xl font-bold text-slate-900 tracking-tight">Cloud Drive Document Explorer</h2>
-        <p className="text-xs text-slate-500">
-          Integrated Google Drive (15 GB Free Lifetime). All customer invoices and warehouse movement vouchers auto-cataloged here.
+        <div className="flex items-center space-x-2">
+          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-brand-100 text-brand-800">
+            MODULE 6
+          </span>
+          <h2 className="text-xl font-bold text-slate-900 tracking-tight">DATA (Cloud Storage & Records)</h2>
+        </div>
+        <p className="text-xs text-slate-500 mt-0.5">
+          Integrated Google Drive (15 GB Free Lifetime). All customer invoices, stock receipts, and data files cataloged here.
         </p>
       </div>
 

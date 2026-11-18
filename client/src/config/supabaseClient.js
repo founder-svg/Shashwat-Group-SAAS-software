@@ -138,5 +138,40 @@ export const initialDemoData = {
       created_at: '2026-11-17 17:15',
       web_view_link: 'https://drive.google.com'
     }
+  ],
+  vehicles: [
+    {
+      id: 'v-1',
+      vehicle_number: 'MH-12-SG-8842',
+      vehicle_type: 'Eicher 14ft Truck',
+      driver_name: 'Ramesh Jadhav',
+      driver_phone: '+91-9822334455',
+      capacity_kg: 3500.00,
+      status: 'available',
+      current_destination: 'Warehouse Base',
+      notes: 'Routine service completed on 12 Nov'
+    },
+    {
+      id: 'v-2',
+      vehicle_number: 'MH-14-SG-1090',
+      vehicle_type: 'Tata Ace Mini Van',
+      driver_name: 'Sunil Pawar',
+      driver_phone: '+91-9877665544',
+      capacity_kg: 1000.00,
+      status: 'on_delivery',
+      current_destination: 'Industrial Area Phase 2',
+      notes: 'Dispatching Invoice #INV-2026-001 to Patel Enterprises'
+    },
+    {
+      id: 'v-3',
+      vehicle_number: 'MH-12-SG-5501',
+      vehicle_type: 'Mahindra Bolero Pickup',
+      driver_name: 'Anil Shinde',
+      driver_phone: '+91-9988112233',
+      capacity_kg: 1500.00,
+      status: 'available',
+      current_destination: 'Warehouse Base',
+      notes: 'Standby for raw material input pickup'
+    }
   ]
 };

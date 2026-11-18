@@ -84,14 +84,18 @@ $clientFiles = @(
     "client/src/services/billingService.js",
     "client/src/services/inventoryService.js",
     "client/src/services/driveService.js",
+    "client/src/services/vehicleService.js",
     "client/src/utils/microPdfGenerator.js",
     "client/src/components/InvoiceModal.jsx",
     "client/src/components/StockMovementModal.jsx",
     "client/src/components/PrintBillModal.jsx",
     "client/src/pages/Dashboard.jsx",
+    "client/src/pages/ProductManagement.jsx",
+    "client/src/pages/VehicleManagement.jsx",
     "client/src/pages/Billing.jsx",
     "client/src/pages/Inventory.jsx",
     "client/src/pages/CloudDrive.jsx",
+    "client/src/pages/StockTransactions.jsx",
     "netlify.toml"
 )
 foreach ($cf in $clientFiles) {

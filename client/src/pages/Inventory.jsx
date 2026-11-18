@@ -69,9 +69,14 @@ export default function Inventory({ inventory, onOpenMovement, onAddItem }) {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
-          <h2 className="text-xl font-bold text-slate-900 tracking-tight">Stock Master & Catalog</h2>
-          <p className="text-xs text-slate-500">
-            Real-time balance tracking for Raw Materials and Finished Goods with low-stock alerts.
+          <div className="flex items-center space-x-2">
+            <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-brand-100 text-brand-800">
+              MODULE 5
+            </span>
+            <h2 className="text-xl font-bold text-slate-900 tracking-tight">Inventory Management (Stock In & Out)</h2>
+          </div>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Real-time warehouse balance tracking, Stock In (Input) receipts, and Stock Out (Output) delivery dispatches.
           </p>
         </div>
 

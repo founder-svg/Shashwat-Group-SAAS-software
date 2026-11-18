@@ -251,8 +251,27 @@ CREATE TABLE IF NOT EXISTS drive_files (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Indexes for inventory and billing
-CREATE INDEX IF NOT EXISTS idx_inventory_org ON inventory_items(organization_id);
+-- ==============================================================================
+-- 12. VEHICLE & FLEET MANAGEMENT (Delivery Logistics & Transport)
+-- ==============================================================================
+
+CREATE TABLE IF NOT EXISTS vehicles (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    vehicle_number VARCHAR(100) NOT NULL, -- e.g. MH-12-AB-1234
+    vehicle_type VARCHAR(50) DEFAULT 'Truck', -- 'Truck', 'Tempo', 'Mini Van', 'Pickup', 'Container'
+    driver_name VARCHAR(150),
+    driver_phone VARCHAR(50),
+    capacity_kg NUMERIC(10, 2) DEFAULT 1000.00,
+    status VARCHAR(50) DEFAULT 'available', -- 'available', 'on_delivery', 'maintenance'
+    current_destination TEXT,
+    notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_vehicles_org ON vehicles(organization_id);
+CREATE INDEX IF NOT EXISTS idx_vehicles_status ON vehicles(status);
 CREATE INDEX IF NOT EXISTS idx_stock_trans_item ON stock_transactions(item_id);
 CREATE INDEX IF NOT EXISTS idx_stock_trans_type ON stock_transactions(transaction_type);
 CREATE INDEX IF NOT EXISTS idx_invoices_org ON invoices(organization_id);

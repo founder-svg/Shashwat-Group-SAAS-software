@@ -109,8 +109,23 @@ CREATE TABLE IF NOT EXISTS drive_files (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- 8. Vehicle & Fleet Management Table
+CREATE TABLE IF NOT EXISTS vehicles (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    organization_id UUID NOT NULL DEFAULT 'a0000000-0000-0000-0000-000000000001',
+    vehicle_number VARCHAR(100) NOT NULL,
+    vehicle_type VARCHAR(50) DEFAULT 'Truck',
+    driver_name VARCHAR(150),
+    driver_phone VARCHAR(50),
+    capacity_kg NUMERIC(10, 2) DEFAULT 1500.00,
+    status VARCHAR(50) DEFAULT 'available', -- 'available', 'on_delivery', 'maintenance'
+    current_destination TEXT,
+    notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 -- ==============================================================================
--- 8. ROW LEVEL SECURITY (RLS) POLICIES FOR 5 TEAM MEMBERS
+-- 9. ROW LEVEL SECURITY (RLS) POLICIES FOR 5 TEAM MEMBERS
 -- Enables secure public/authenticated CRUD access for the commercial dashboard
 -- ==============================================================================
 
@@ -120,6 +135,7 @@ ALTER TABLE stock_transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE invoices ENABLE ROW LEVEL SECURITY;
 ALTER TABLE invoice_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE drive_files ENABLE ROW LEVEL SECURITY;
+ALTER TABLE vehicles ENABLE ROW LEVEL SECURITY;
 
 -- Allow read & write access for team
 CREATE POLICY "Allow all operations on organizations" ON organizations FOR ALL USING (true) WITH CHECK (true);
@@ -128,6 +144,7 @@ CREATE POLICY "Allow all operations on stock_transactions" ON stock_transactions
 CREATE POLICY "Allow all operations on invoices" ON invoices FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all operations on invoice_items" ON invoice_items FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all operations on drive_files" ON drive_files FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all operations on vehicles" ON vehicles FOR ALL USING (true) WITH CHECK (true);
 
 -- ==============================================================================
 -- 9. POPULATE INITIAL SEED DATA
@@ -153,3 +170,9 @@ INSERT INTO stock_transactions (transaction_type, item_id, quantity, unit_cost, 
 VALUES 
     ('STOCK_IN', 'e0000000-0000-0000-0000-000000000001', 500.00, 85.00, 42500.00, 1500.00, 'PO-2026-089', 'Tata Steel Suppliers', 'Bulk stock input received'),
     ('STOCK_OUT', 'e0000000-0000-0000-0000-000000000002', 5.00, 12500.00, 62500.00, 45.00, 'DISP-2026-012', 'Patel Enterprises', 'Dispatched against Invoice #INV-2026-001');
+
+INSERT INTO vehicles (vehicle_number, vehicle_type, driver_name, driver_phone, capacity_kg, status, current_destination, notes)
+VALUES
+    ('MH-12-SG-8842', 'Eicher 14ft Truck', 'Ramesh Jadhav', '+91-9822334455', 3500.00, 'available', 'Warehouse Base', 'Routine service completed on 12 Nov'),
+    ('MH-14-SG-1090', 'Tata Ace Mini Van', 'Sunil Pawar', '+91-9877665544', 1000.00, 'on_delivery', 'Industrial Area Phase 2', 'Dispatching Invoice #INV-2026-001 to Patel Enterprises'),
+    ('MH-12-SG-5501', 'Mahindra Bolero Pickup', 'Anil Shinde', '+91-9988112233', 1500.00, 'available', 'Warehouse Base', 'Standby for raw material pickup');

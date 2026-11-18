@@ -44,9 +44,14 @@ export default function Billing({ invoices, onOpenCreate, onPrint, onRecordPayme
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
-          <h2 className="text-xl font-bold text-slate-900 tracking-tight">Billing & Invoicing</h2>
-          <p className="text-xs text-slate-500">
-            Generate GST-compliant commercial bills, track payments, and sync to Google Drive.
+          <div className="flex items-center space-x-2">
+            <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-brand-100 text-brand-800">
+              MODULE 4
+            </span>
+            <h2 className="text-xl font-bold text-slate-900 tracking-tight">Invoice Bill & Invoicing</h2>
+          </div>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Generate GST-compliant commercial bills, track payments, download vector PDFs in KB, and sync to Google Drive.
           </p>
         </div>
 

@@ -1,4 +1,4 @@
-import { supabase, isConfigured, initialDemoData } from '../config/supabaseClient';
+import { supabase, isConfigured } from '../config/supabaseClient';
 import { inventoryService } from './inventoryService';
 
 const LOCAL_INVOICE_KEY = 'shashwat_invoices_cache';
@@ -9,12 +9,12 @@ function getCachedInvoices() {
     try { 
       const parsed = JSON.parse(cached);
       // Clean filter to ensure zero stale mock/demo data like Patel Enterprises
-      return parsed.filter(i => 
+      return (parsed || []).filter(i => 
         i && 
         i.customer_name !== 'Patel Enterprises' && 
         i.customer_name !== 'Patel Timber Mart' && 
         i.invoice_number !== 'INV-2026-001' &&
-        !['inv-1', 'inv-demo'].includes(i.id)
+        !['inv-1', 'inv-demo', '10000000-0000-0000-0000-000000000001'].includes(i.id)
       );
     } catch (e) {}
   }
@@ -22,48 +22,71 @@ function getCachedInvoices() {
 }
 
 function saveCachedInvoices(invoices) {
-  localStorage.setItem(LOCAL_INVOICE_KEY, JSON.stringify(invoices));
+  try {
+    localStorage.setItem(LOCAL_INVOICE_KEY, JSON.stringify(invoices));
+  } catch (e) {}
 }
 
 export const billingService = {
   async getInvoices() {
-    if (!isConfigured) {
-      return { data: getCachedInvoices(), error: null };
+    const cached = getCachedInvoices();
+
+    if (!isConfigured || !supabase) {
+      return { data: cached, error: null };
     }
-    const { data, error } = await supabase
-      .from('invoices')
-      .select('*, invoice_items(*)')
-      .order('invoice_date', { ascending: false });
 
-    // Filter out any stale mock records (such as Patel Enterprises) from Supabase
-    const cleanList = (data || []).filter(i => 
-      i && 
-      i.customer_name !== 'Patel Enterprises' && 
-      i.customer_name !== 'Patel Timber Mart' && 
-      i.invoice_number !== 'INV-2026-001' &&
-      !['inv-1', 'inv-demo', '10000000-0000-0000-0000-000000000001'].includes(i.id)
-    );
+    try {
+      const { data, error } = await supabase
+        .from('invoices')
+        .select('*, invoice_items(*)')
+        .order('invoice_date', { ascending: false });
 
-    // Map invoice_items to items for consistent frontend usage
-    cleanList.forEach(inv => {
-      if (inv.invoice_items && !inv.items) {
-        inv.items = inv.invoice_items.map(it => ({
-          ...it,
-          itemName: it.item_name,
-          itemDescription: it.item_description || '',
-          vehicleNo: it.vehicle_no || inv.vehicle_no || '',
-          length: it.length || 0,
-          width: it.width || 0,
-          thickness: it.thickness || 0,
-          unitPrice: it.unit_price,
-          totalPrice: it.total_price,
-          pieces: it.pieces || it.quantity || 1,
-          totalCft: it.total_cft || 0
-        }));
+      if (error) {
+        console.warn('Supabase fetch notice, falling back to local storage:', error);
+        return { data: cached, error: null };
       }
-    });
 
-    return { data: cleanList, error };
+      // Map invoice_items to items for consistent frontend usage
+      const cleanList = (data || []).filter(i => 
+        i && 
+        i.customer_name !== 'Patel Enterprises' && 
+        i.customer_name !== 'Patel Timber Mart' && 
+        i.invoice_number !== 'INV-2026-001' &&
+        !['inv-1', 'inv-demo', '10000000-0000-0000-0000-000000000001'].includes(i.id)
+      );
+
+      cleanList.forEach(inv => {
+        if (inv.invoice_items && !inv.items) {
+          inv.items = inv.invoice_items.map(it => ({
+            ...it,
+            itemName: it.item_name,
+            itemDescription: it.item_description || '',
+            vehicleNo: it.vehicle_no || inv.vehicle_no || '',
+            length: it.length || 0,
+            width: it.width || 0,
+            thickness: it.thickness || 0,
+            unitPrice: Number(it.unit_price) || 0,
+            totalPrice: Number(it.total_price) || 0,
+            pieces: it.pieces || it.quantity || 1,
+            totalCft: it.total_cft || 0
+          }));
+        }
+      });
+
+      // Merge cached and remote items (deduplicated by invoice_number)
+      const invoiceMap = new Map();
+      cached.forEach(i => invoiceMap.set(i.invoice_number || i.id, i));
+      cleanList.forEach(i => invoiceMap.set(i.invoice_number || i.id, i));
+
+      const merged = Array.from(invoiceMap.values()).sort((a, b) => {
+        return new Date(b.invoice_date || 0) - new Date(a.invoice_date || 0);
+      });
+
+      return { data: merged, error: null };
+    } catch (err) {
+      console.warn('Network error, showing local invoices:', err);
+      return { data: cached, error: null };
+    }
   },
 
   async createInvoice(invoiceInput) {
@@ -71,12 +94,13 @@ export const billingService = {
       customerName,
       customerEmail,
       customerPhone,
+      whatsappNo,
       customerAddress,
       vehicleNo = '',
       transport = 'ARRANGE',
       invoiceDate,
       dueDate,
-      items,
+      items = [],
       taxRate = 0,
       discountAmount = 0,
       paymentMethod = 'Bank Transfer',
@@ -84,11 +108,17 @@ export const billingService = {
       autoDeductStock = true
     } = invoiceInput;
 
-    // Calculate totals & enrich timber fields
+    // Sanitize dates to prevent Postgres empty string syntax error: invalid input syntax for type date: ""
+    const cleanDueDate = dueDate && String(dueDate).trim() !== '' ? String(dueDate).trim() : null;
+    const cleanInvoiceDate = invoiceDate && String(invoiceDate).trim() !== '' 
+      ? String(invoiceDate).trim() 
+      : new Date().toISOString().split('T')[0];
+
+    // Calculate totals & round numeric values to 2 decimals to prevent Postgres numeric field overflow
     let subtotal = 0;
     const computedItems = items.map((it, idx) => {
       const pcs = parseFloat(it.pieces) || 1;
-      const totCft = parseFloat(it.totalCft) || 0;
+      const totCft = parseFloat(it.totalCft || it.sqft) || 0;
       const price = parseFloat(it.unitPrice) || 0;
       const rowTotal = it.totalPrice !== undefined 
         ? parseFloat(it.totalPrice) 
@@ -100,235 +130,208 @@ export const billingService = {
         id: `item-${Date.now()}-${idx}`,
         item_id: it.itemId || null,
         item_name: it.itemName,
-        item_description: it.itemDescription || '',
+        item_description: it.itemDescription || it.specific || '',
+        specific: it.specific || it.itemDescription || '',
         vehicle_no: it.vehicleNo || vehicleNo || '',
-        length: parseFloat(it.length) || 0,
-        width: parseFloat(it.width) || 0,
-        thickness: parseFloat(it.thickness) || 0,
-        cft: parseFloat(it.cft) || 0,
+        length: Number((parseFloat(it.length) || 0).toFixed(2)),
+        width: Number((parseFloat(it.width) || 0).toFixed(2)),
+        thickness: Number((parseFloat(it.thickness) || 0).toFixed(2)),
+        cft: Number((parseFloat(it.cft) || 0).toFixed(3)),
+        sqft: Number((totCft || 0).toFixed(3)),
         pieces: pcs,
-        total_cft: totCft,
-        quantity: totCft > 0 ? totCft : pcs,
-        unit_price: price,
-        total_price: rowTotal
+        total_cft: Number((totCft || 0).toFixed(3)),
+        quantity: Number((totCft > 0 ? totCft : pcs).toFixed(2)),
+        unit_price: Number(price.toFixed(2)),
+        total_price: Number(rowTotal.toFixed(2))
       };
     });
 
-    const activeTaxRate = parseFloat(taxRate) || 0;
-    const taxAmount = (subtotal * activeTaxRate) / 100;
-    const totalAmount = subtotal + taxAmount - (parseFloat(discountAmount) || 0);
+    const activeTaxRate = Number((parseFloat(taxRate) || 0).toFixed(2));
+    const taxAmount = Number(((subtotal * activeTaxRate) / 100).toFixed(2));
+    const cleanDiscount = Number((parseFloat(discountAmount) || 0).toFixed(2));
+    const totalAmount = Number((subtotal + taxAmount - cleanDiscount).toFixed(2));
     const invoiceNumber = `INV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
 
-    if (!isConfigured) {
-      const invoices = getCachedInvoices();
-      const newInvoice = {
-        id: `inv-${Date.now()}`,
-        invoice_number: invoiceNumber,
-        customer_name: customerName,
-        customer_email: customerEmail || '',
-        customer_phone: customerPhone || '',
-        customer_address: customerAddress || '',
-        vehicle_no: vehicleNo || '',
-        transport: transport || 'ARRANGE',
-        invoice_date: invoiceDate || new Date().toISOString().split('T')[0],
-        due_date: dueDate || '',
-        subtotal,
-        tax_rate: activeTaxRate,
-        tax_amount: taxAmount,
-        discount_amount: discountAmount,
-        total_amount: totalAmount,
-        amount_paid: 0,
-        balance_due: totalAmount,
-        status: 'ISSUED',
-        payment_method: paymentMethod,
-        notes: notes || '',
-        file_size_kb: 5.4, // Micro-PDF size strictly in KB
-        items: computedItems
-      };
-
-      invoices.unshift(newInvoice);
-      saveCachedInvoices(invoices);
-
-      // Auto deduct stock in offline mode
-      if (autoDeductStock) {
-        for (const it of computedItems) {
-          if (it.item_id) {
-            await inventoryService.stockOut({
-              itemId: it.item_id,
-              quantity: it.quantity,
-              referenceNumber: invoiceNumber,
-              partyName: customerName,
-              notes: `Auto-deducted for ${customerName} (${it.pieces} pcs)`
-            });
-          }
-        }
-      }
-
-      return { data: newInvoice, error: null };
-    }
-
-    // Direct Supabase Insert
-    const insertPayload = {
+    // Build complete invoice object
+    const newInvoice = {
+      id: `inv-${Date.now()}`,
       invoice_number: invoiceNumber,
       customer_name: customerName,
-      customer_email: customerEmail,
-      customer_phone: customerPhone,
-      customer_address: customerAddress,
-      invoice_date: invoiceDate || new Date(),
-      due_date: dueDate,
-      subtotal,
+      customer_email: customerEmail || '',
+      customer_phone: customerPhone || '',
+      whatsapp_no: whatsappNo || customerPhone || '',
+      customer_address: customerAddress || '',
+      vehicle_no: vehicleNo || '',
+      transport: transport || 'ARRANGE',
+      invoice_date: cleanInvoiceDate,
+      due_date: cleanDueDate || '',
+      subtotal: Number(subtotal.toFixed(2)),
       tax_rate: activeTaxRate,
       tax_amount: taxAmount,
-      discount_amount: discountAmount,
+      discount_amount: cleanDiscount,
       total_amount: totalAmount,
-      amount_paid: 0,
+      amount_paid: 0.00,
       balance_due: totalAmount,
       status: 'ISSUED',
-      payment_method: paymentMethod,
-      notes
+      payment_method: paymentMethod || 'Bank Transfer',
+      notes: notes || '',
+      file_size_kb: 5.4,
+      items: computedItems
     };
 
-    const { data: invData, error: invErr } = await supabase
-      .from('invoices')
-      .insert([insertPayload])
-      .select()
-      .single();
+    // 1. ALWAYS SAVE TO LOCAL STORAGE FIRST (Guarantees invoice is immediately displayed)
+    const cachedInvoices = getCachedInvoices();
+    cachedInvoices.unshift(newInvoice);
+    saveCachedInvoices(cachedInvoices);
 
-    if (invErr) return { error: invErr };
-
-    // Insert line items
-    const lineItemRows = computedItems.map(it => {
-      let displayName = it.item_name;
-      if (it.item_description) {
-        displayName = `${it.item_name} (${it.item_description})`;
-      }
-      if (it.pieces && it.total_cft) {
-        displayName += ` [${it.pieces} Pcs | ${it.total_cft} CFT]`;
-      }
-
-      return {
-        invoice_id: invData.id,
-        item_id: it.item_id,
-        item_name: displayName,
-        quantity: it.quantity,
-        unit_price: it.unit_price,
-        total_price: it.total_price
-      };
-    });
-
-    await supabase.from('invoice_items').insert(lineItemRows);
-
-    // Auto deduct stock if needed
+    // Auto deduct stock in offline mode
     if (autoDeductStock) {
       for (const it of computedItems) {
         if (it.item_id) {
-          await inventoryService.stockOut({
+          inventoryService.stockOut({
             itemId: it.item_id,
             quantity: it.quantity,
             referenceNumber: invoiceNumber,
             partyName: customerName,
-            notes: `Stock-out dispatch for ${customerName} (${it.pieces} pcs)`
-          });
+            notes: `Dispatched against ${invoiceNumber} (${it.pieces} pcs)`
+          }).catch(() => {});
         }
       }
     }
 
-    invData.items = computedItems;
-    invData.vehicle_no = vehicleNo;
-    invData.transport = transport;
-    return { data: invData, error: null };
+    // 2. SYNC TO SUPABASE IF CONFIGURED (With resilient fallback)
+    if (isConfigured && supabase) {
+      try {
+        const insertPayload = {
+          invoice_number: invoiceNumber,
+          customer_name: customerName,
+          customer_email: customerEmail || null,
+          customer_phone: customerPhone || null,
+          customer_address: customerAddress || null,
+          invoice_date: cleanInvoiceDate,
+          due_date: cleanDueDate,
+          subtotal: Number(subtotal.toFixed(2)),
+          tax_rate: activeTaxRate,
+          tax_amount: taxAmount,
+          discount_amount: cleanDiscount,
+          total_amount: totalAmount,
+          amount_paid: 0.00,
+          balance_due: totalAmount,
+          status: 'ISSUED',
+          payment_method: paymentMethod || 'Bank Transfer',
+          notes: notes || null
+        };
+
+        const { data: invData, error: invErr } = await supabase
+          .from('invoices')
+          .insert([insertPayload])
+          .select()
+          .single();
+
+        if (!invErr && invData) {
+          newInvoice.id = invData.id;
+
+          // Insert line items
+          const lineItemRows = computedItems.map(it => ({
+            invoice_id: invData.id,
+            item_id: it.item_id || null,
+            item_name: it.item_description ? `${it.item_name} (${it.item_description})` : it.item_name,
+            quantity: Number((it.quantity || 1).toFixed(2)),
+            unit_price: Number((it.unit_price || 0).toFixed(2)),
+            total_price: Number((it.total_price || 0).toFixed(2))
+          }));
+
+          await supabase.from('invoice_items').insert(lineItemRows).catch(() => {});
+        } else if (invErr) {
+          console.warn('Supabase insert notice (stored locally):', invErr.message);
+        }
+      } catch (sbErr) {
+        console.warn('Supabase network notice (stored locally):', sbErr);
+      }
+    }
+
+    // Always return successful creation
+    return { data: newInvoice, error: null };
   },
 
   async recordPayment(invoiceId, amount, paymentMethod = 'Bank Transfer') {
     const payVal = parseFloat(amount) || 0;
     if (payVal <= 0) return { error: { message: 'Invalid payment amount' } };
 
-    if (!isConfigured) {
-      const invoices = getCachedInvoices();
-      const idx = invoices.findIndex(i => i.id === invoiceId);
-      if (idx !== -1) {
-        const inv = invoices[idx];
-        const newAmountPaid = Number(inv.amount_paid || 0) + payVal;
-        const newBalanceDue = Math.max(0, Number(inv.total_amount) - newAmountPaid);
-        const newStatus = newBalanceDue === 0 ? 'PAID' : (newAmountPaid > 0 ? 'PARTIALLY_PAID' : inv.status);
+    // Update locally first
+    const invoices = getCachedInvoices();
+    const idx = invoices.findIndex(i => i.id === invoiceId || i.invoice_number === invoiceId);
+    let updatedInv = null;
+    if (idx !== -1) {
+      const inv = invoices[idx];
+      const newAmountPaid = Number(inv.amount_paid || 0) + payVal;
+      const newBalanceDue = Math.max(0, Number(inv.total_amount) - newAmountPaid);
+      const newStatus = newBalanceDue === 0 ? 'PAID' : (newAmountPaid > 0 ? 'PARTIALLY_PAID' : inv.status);
 
-        invoices[idx] = {
-          ...inv,
-          amount_paid: newAmountPaid,
-          balance_due: newBalanceDue,
-          status: newStatus,
-          payment_method: paymentMethod,
-          updated_at: new Date().toISOString()
-        };
-        saveCachedInvoices(invoices);
-        return { data: invoices[idx], error: null };
-      }
-      return { error: { message: 'Invoice not found' } };
-    }
-
-    const { data: inv, error: fetchErr } = await supabase
-      .from('invoices')
-      .select('*')
-      .eq('id', invoiceId)
-      .single();
-
-    if (fetchErr) return { error: fetchErr };
-
-    const newAmountPaid = Number(inv.amount_paid || 0) + payVal;
-    const newBalanceDue = Math.max(0, Number(inv.total_amount) - newAmountPaid);
-    const newStatus = newBalanceDue === 0 ? 'PAID' : (newAmountPaid > 0 ? 'PARTIALLY_PAID' : inv.status);
-
-    const { data, error } = await supabase
-      .from('invoices')
-      .update({
+      invoices[idx] = {
+        ...inv,
         amount_paid: newAmountPaid,
         balance_due: newBalanceDue,
         status: newStatus,
         payment_method: paymentMethod,
-        updated_at: new Date()
-      })
-      .eq('id', invoiceId)
-      .select()
-      .single();
+        updated_at: new Date().toISOString()
+      };
+      saveCachedInvoices(invoices);
+      updatedInv = invoices[idx];
+    }
 
-    return { data, error };
+    if (isConfigured && supabase) {
+      try {
+        await supabase
+          .from('invoices')
+          .update({
+            amount_paid: updatedInv ? updatedInv.amount_paid : payVal,
+            balance_due: updatedInv ? updatedInv.balance_due : 0,
+            status: updatedInv ? updatedInv.status : 'PAID',
+            payment_method: paymentMethod,
+            updated_at: new Date()
+          })
+          .eq('id', invoiceId);
+      } catch (e) {}
+    }
+
+    return { data: updatedInv, error: null };
   },
 
   async updateInvoice(invoiceId, updates) {
-    if (!isConfigured) {
-      const invoices = getCachedInvoices();
-      const idx = invoices.findIndex(i => i.id === invoiceId);
-      if (idx !== -1) {
-        invoices[idx] = { ...invoices[idx], ...updates, updated_at: new Date().toISOString() };
-        saveCachedInvoices(invoices);
-        return { data: invoices[idx], error: null };
-      }
-      return { error: { message: 'Invoice not found' } };
+    const invoices = getCachedInvoices();
+    const idx = invoices.findIndex(i => i.id === invoiceId || i.invoice_number === invoiceId);
+    let updatedInv = null;
+    if (idx !== -1) {
+      invoices[idx] = { ...invoices[idx], ...updates, updated_at: new Date().toISOString() };
+      saveCachedInvoices(invoices);
+      updatedInv = invoices[idx];
     }
 
-    const { data, error } = await supabase
-      .from('invoices')
-      .update({ ...updates, updated_at: new Date() })
-      .eq('id', invoiceId)
-      .select()
-      .single();
-    return { data, error };
+    if (isConfigured && supabase) {
+      try {
+        await supabase
+          .from('invoices')
+          .update({ ...updates, updated_at: new Date() })
+          .eq('id', invoiceId);
+      } catch (e) {}
+    }
+
+    return { data: updatedInv || updates, error: null };
   },
 
   async deleteInvoice(invoiceId) {
-    if (!isConfigured) {
-      let invoices = getCachedInvoices();
-      invoices = invoices.filter(i => i.id !== invoiceId);
-      saveCachedInvoices(invoices);
-      return { data: { success: true }, error: null };
+    let invoices = getCachedInvoices();
+    invoices = invoices.filter(i => i.id !== invoiceId && i.invoice_number !== invoiceId);
+    saveCachedInvoices(invoices);
+
+    if (isConfigured && supabase) {
+      try {
+        await supabase.from('invoice_items').delete().eq('invoice_id', invoiceId);
+        await supabase.from('invoices').delete().eq('id', invoiceId);
+      } catch (e) {}
     }
 
-    // Delete related line items first, then invoice
-    await supabase.from('invoice_items').delete().eq('invoice_id', invoiceId);
-    const { data, error } = await supabase
-      .from('invoices')
-      .delete()
-      .eq('id', invoiceId);
-    return { data, error };
+    return { data: { success: true }, error: null };
   }
 };

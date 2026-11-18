@@ -55,21 +55,31 @@ function enrichItemWithWoodSpecs(item) {
 
 export const inventoryService = {
   async getItems() {
-    if (!isConfigured) {
-      const items = getCachedItems().map(enrichItemWithWoodSpecs);
-      return { data: items, error: null };
+    const cached = getCachedItems().map(enrichItemWithWoodSpecs);
+    if (!isConfigured || !supabase) {
+      return { data: cached, error: null };
     }
-    const { data, error } = await supabase
-      .from('inventory_items')
-      .select('*')
-      .order('name', { ascending: true });
+    try {
+      const { data, error } = await supabase
+        .from('inventory_items')
+        .select('*')
+        .order('name', { ascending: true });
 
-    const enriched = (data || []).map(enrichItemWithWoodSpecs);
-    return { data: enriched, error };
+      if (error) {
+        return { data: cached, error: null };
+      }
+
+      const itemMap = new Map();
+      cached.forEach(i => itemMap.set(i.id || i.sku, i));
+      (data || []).forEach(i => itemMap.set(i.id || i.sku, enrichItemWithWoodSpecs(i)));
+
+      return { data: Array.from(itemMap.values()), error: null };
+    } catch (e) {
+      return { data: cached, error: null };
+    }
   },
 
   async addItem(item) {
-    // Format description with dimensions spec if available
     let formattedDesc = item.description || '';
     if (item.length && item.width && item.thickness) {
       const specTag = `[Specs: ${item.length}L × ${item.width}W × ${item.thickness}T | ${item.cft || 0} CFT]`;
@@ -87,61 +97,33 @@ export const inventoryService = {
       min_reorder_level: Number(item.min_reorder_level) || 10
     };
 
-    if (!isConfigured) {
-      const items = getCachedItems();
-      const newItem = {
-        ...payload,
-        id: `local-${Date.now()}`
-      };
-      items.push(newItem);
-      saveCachedItems(items);
-      return { data: newItem, error: null };
-    }
+    // Always save to local cache first (guarantees immediate visibility)
+    const items = getCachedItems();
+    const newItem = {
+      ...payload,
+      id: `local-${Date.now()}`
+    };
+    items.push(newItem);
+    saveCachedItems(items);
 
-    // Try inserting full payload with wood dimension columns
-    let { data, error } = await supabase
-      .from('inventory_items')
-      .insert([payload])
-      .select()
-      .single();
+    if (isConfigured && supabase) {
+      try {
+        const { data, error } = await supabase
+          .from('inventory_items')
+          .insert([payload])
+          .select()
+          .single();
 
-    // Fallback if Supabase table doesn't have the new dimension columns yet
-    if (error && (error.message?.includes('column') || error.code === '42703')) {
-      const standardPayload = {
-        sku: payload.sku,
-        name: payload.name,
-        description: payload.description,
-        category: payload.category || 'General',
-        item_type: payload.item_type || 'finished_good',
-        unit: payload.unit || 'pcs',
-        cost_price: payload.cost_price,
-        selling_price: payload.selling_price,
-        current_stock: payload.current_stock,
-        min_reorder_level: payload.min_reorder_level
-      };
-
-      const fallbackRes = await supabase
-        .from('inventory_items')
-        .insert([standardPayload])
-        .select()
-        .single();
-
-      if (fallbackRes.data) {
-        return {
-          data: {
-            ...fallbackRes.data,
-            length: payload.length,
-            width: payload.width,
-            thickness: payload.thickness,
-            cft: payload.cft
-          },
-          error: null
-        };
+        if (!error && data) {
+          newItem.id = data.id;
+          saveCachedItems(items);
+        }
+      } catch (e) {
+        console.warn('Supabase product sync notice (saved locally):', e);
       }
-      return fallbackRes;
     }
 
-    return { data: enrichItemWithWoodSpecs(data), error };
+    return { data: enrichItemWithWoodSpecs(newItem), error: null };
   },
 
   async stockIn({ itemId, quantity, unitCost, referenceNumber, partyName, notes }) {

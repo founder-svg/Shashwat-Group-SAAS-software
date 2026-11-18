@@ -340,6 +340,7 @@ export default function App() {
               {/* Module 2: Product Management with Edit & Delete */}
               {activeTab === 'products' && (
                 <ProductManagement
+                  firm={selectedFirm}
                   inventory={inventory}
                   onAddItem={handleAddItem}
                   onUpdateItem={handleUpdateItem}
@@ -373,6 +374,7 @@ export default function App() {
               {/* Module 5: Inventory Management with Edit & Delete */}
               {activeTab === 'inventory' && (
                 <Inventory
+                  firm={selectedFirm}
                   inventory={inventory}
                   onOpenMovement={openStockModal}
                   onAddItem={handleAddItem}
@@ -408,6 +410,7 @@ export default function App() {
         onClose={() => setIsInvoiceModalOpen(false)}
         onCreated={handleCreateInvoice}
         inventoryItems={inventory}
+        firm={selectedFirm}
       />
 
       <StockMovementModal

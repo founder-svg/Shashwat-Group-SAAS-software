@@ -13,15 +13,17 @@ import {
   X,
   Ruler
 } from 'lucide-react';
-import { calculateCft } from '../utils/woodCalculator';
+import { calculateCft, isPlywoodItem } from '../utils/woodCalculator';
 
 export default function Inventory({ 
+  firm,
   inventory = [], 
   onOpenMovement, 
   onAddItem, 
   onUpdateItem, 
   onDeleteItem 
 }) {
+  const isAshapura = firm?.id === 'shashwat_ashapura_woods' || firm?.name?.toLowerCase().includes('ashapura');
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [showAddModal, setShowAddModal] = useState(false);
@@ -65,9 +67,13 @@ export default function Inventory({
     setEditSelling(item.selling_price !== undefined ? item.selling_price.toString() : '0');
   };
 
-  const categories = ['ALL', ...new Set(inventory.map(i => i.category || 'General Timber'))];
+  const categories = ['ALL', ...new Set(inventory.filter(i => isAshapura || !isPlywoodItem(i)).map(i => i.category || 'General Timber'))];
 
   const filteredInventory = inventory.filter((item) => {
+    // If firm is Shashwat Woods, strictly show only wood items
+    if (!isAshapura && isPlywoodItem(item)) {
+      return false;
+    }
     const matchesSearch = 
       item.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.sku?.toLowerCase().includes(searchTerm.toLowerCase());

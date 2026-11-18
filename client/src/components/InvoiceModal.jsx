@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
 import { X, Plus, Trash2, Receipt, ShieldCheck, Calculator, Ruler, Layers } from 'lucide-react';
-import { calculateCft, calculateTotalCft } from '../utils/woodCalculator';
+import { calculateCft, calculateTotalCft, isPlywoodItem } from '../utils/woodCalculator';
 
-export default function InvoiceModal({ isOpen, onClose, onCreated, inventoryItems = [] }) {
+export default function InvoiceModal({ isOpen, onClose, onCreated, inventoryItems = [], firm }) {
+  const isAshapura = firm?.id === 'shashwat_ashapura_woods' || firm?.name?.toLowerCase().includes('ashapura');
+  const availableItems = inventoryItems.filter(i => isAshapura || !isPlywoodItem(i));
+
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
@@ -173,8 +176,12 @@ export default function InvoiceModal({ isOpen, onClose, onCreated, inventoryItem
               <Receipt className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-base font-black tracking-tight">Generate Wood &amp; Timber Invoice</h2>
-              <p className="text-[11px] text-slate-400">Pieces, Length, Width, Thickness &amp; CFT Auto-Calculator</p>
+              <h2 className="text-base font-black tracking-tight">
+                {isAshapura ? 'Generate Wood & Plywood Commercial Invoice' : 'Generate Wood & Timber Invoice'}
+              </h2>
+              <p className="text-[11px] text-slate-400">
+                {isAshapura ? 'Pieces, Sheets, Dimensions, Sq.Ft & CFT Auto-Calculators' : 'Pieces, Length, Width, Thickness & CFT Auto-Calculator'}
+              </p>
             </div>
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-white transition p-1">
@@ -303,9 +310,9 @@ export default function InvoiceModal({ isOpen, onClose, onCreated, inventoryItem
                         className="w-full text-xs px-2.5 py-1.5 border border-slate-300 rounded-lg bg-slate-50"
                       >
                         <option value="">-- Catalog Item (Optional) --</option>
-                        {inventoryItems.map(inv => (
+                        {availableItems.map(inv => (
                           <option key={inv.id} value={inv.id}>
-                            {inv.name} ({inv.cft ? `${inv.cft} CFT` : inv.unit})
+                            {inv.name} ({inv.cft ? `${inv.cft} ${isPlywoodItem(inv) ? 'Sq.Ft' : 'CFT'}` : inv.unit})
                           </option>
                         ))}
                       </select>

@@ -4,7 +4,7 @@ export const FIRMS = {
     name: 'Shashwat Woods',
     shortName: 'SW',
     tagline: 'Premium Timber, Plywood & Architectural Wood Solutions',
-    logo: '/logos/shashwat-woods.jpg',
+    logo: '/logos/shashwat-woods.png',
     themeColor: 'emerald',
     badgeColor: 'bg-emerald-600 text-white',
     accentBorder: 'border-emerald-500',

@@ -35,8 +35,6 @@ export default function Inventory({
   const [initialStock, setInitialStock] = useState('0');
   const [minReorderLevel, setMinReorderLevel] = useState('10');
 
-  const categories = ['ALL', ...new Set(inventory.map(i => i.category || 'General'))];
-
   const openEditModal = (item) => {
     setEditingItem(item);
     setEditName(item.name || '');

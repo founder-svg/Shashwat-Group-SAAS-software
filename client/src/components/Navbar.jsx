@@ -1,5 +1,5 @@
 import React from 'react';
-import { Building2, CloudCheck, CloudOff, Users, LogOut, RefreshCw, Shield, RotateCcw } from 'lucide-react';
+import { Building2, Users, LogOut, RefreshCw, Shield, RotateCcw } from 'lucide-react';
 import { isConfigured } from '../config/supabaseClient';
 
 export default function Navbar({ firm, user, onSwitchFirm, onLogout, onFactoryReset }) {

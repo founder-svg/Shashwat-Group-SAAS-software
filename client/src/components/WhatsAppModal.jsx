@@ -140,7 +140,7 @@ _For any queries or payments, please contact ${companyName}._`;
             </div>
             <div>
               <h3 className="text-base font-black tracking-tight">Send Invoice Bill to WhatsApp</h3>
-              <p className="text-[11px] text-emerald-100">Dispatches vector PDF bill (< 8 KB) directly to WhatsApp</p>
+              <p className="text-[11px] text-emerald-100">Dispatches vector PDF bill (under 8 KB) directly to WhatsApp</p>
             </div>
           </div>
           <button 

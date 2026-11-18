@@ -17,7 +17,6 @@ export default function PrintBillModal({ isOpen, onClose, invoice, firm, onEdit 
 
   const isAshapura = firm?.id === 'shashwat_ashapura_woods' || firm?.name?.toLowerCase().includes('ashapura');
   const companyTitle = invoice.firm_name || (isAshapura ? 'SHASHWAT ASHAPURA WOODS' : 'SHASHWAT WOODS');
-  const companyLogo = isAshapura ? '/assets/saw-wood-logo.png' : '/assets/sw-wood-logo.png';
 
   const subtotal = Number(invoice.subtotal || 0);
   const taxRate = Number(invoice.tax_rate || 0);
@@ -28,12 +27,20 @@ export default function PrintBillModal({ isOpen, onClose, invoice, firm, onEdit 
 
   const items = invoice.items || [];
   const totalPcs = items.reduce((acc, it) => acc + (Number(it.pieces) || Number(it.quantity) || 1), 0);
-  const totalVolume = items.reduce((acc, it) => acc + (Number(it.total_cft || it.totalCft) || 0), 0);
+  const totalSqFt = items.reduce((acc, it) => {
+    const val = Number(it.sqft || it.total_cft || it.totalCft || 0);
+    return acc + val;
+  }, 0);
+
+  // Minimum 8 grid rows to match the client's Excel template
+  const minRows = 8;
+  const emptyRowsCount = Math.max(0, minRows - items.length);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-2 sm:p-4 overflow-y-auto">
       <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-4xl overflow-hidden my-6">
-        {/* Top Control Bar (Hidden when printing) - Contains Preview, Print, WhatsApp PDF, Download PDF, Edit */}
+        {/* Top Control Bar (Hidden when printing) */}
+        {/* Contains 4 Action Controls: Print, WhatsApp PDF, Download PDF, Edit */}
         <div className="bg-slate-900 text-white px-4 sm:px-6 py-3.5 flex flex-wrap items-center justify-between gap-2.5 no-print">
           <div className="flex items-center space-x-2">
             <span className="flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-lg bg-sky-600 text-white">
@@ -50,7 +57,7 @@ export default function PrintBillModal({ isOpen, onClose, invoice, firm, onEdit 
           </div>
 
           <div className="flex items-center flex-wrap gap-2">
-            {/* 1. Print Bill (A4 / Thermal) */}
+            {/* 1. Print Bill */}
             <button
               onClick={handlePrint}
               className="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-bold transition border border-slate-700 shadow-sm"
@@ -103,145 +110,166 @@ export default function PrintBillModal({ isOpen, onClose, invoice, firm, onEdit 
           </div>
         </div>
 
-        {/* Printable Bill Content formatted per client packing list / invoice sample */}
+        {/* Printable Bill Content formatted strictly per client sample table screenshot */}
         <div id="printable-bill" className="p-6 sm:p-8 text-slate-900 text-xs bg-white">
-          {/* Centered Sacred Invocation */}
+          {/* Top Auspicious & Firm Info */}
           <div className="text-center mb-1">
             <p className="text-xs font-bold text-slate-700 tracking-wider font-serif">
               ॥ श्री गणेशाय नमः ॥
             </p>
           </div>
 
-          {/* Company Name & Gandhidham Address */}
-          <div className="border-b-2 border-slate-900 pb-3 mb-4 text-center">
-            <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-              {companyTitle}
-            </h1>
-            <p className="text-[11px] font-bold text-amber-900 tracking-wider my-0.5">
-              ॥ नीति शतकम् ॥
-            </p>
-            <p className="text-[10px] sm:text-[11px] text-slate-700 font-medium max-w-2xl mx-auto leading-tight">
-              PLOT NO-163-164, SHOP NO-1/2/3, SN-138 NR. VENUS SOCIETY, ANTARJAL, GANDHIDHAM KUTCH GUJARAT-370205
-            </p>
-            <p className="text-[11px] font-bold text-slate-900 mt-0.5">
-              Mo: +91 91379 21191, +91 99982 55525
-            </p>
-            <div className="mt-2 inline-block px-4 py-0.5 bg-slate-900 text-white rounded text-[11px] font-black uppercase tracking-widest">
-              TAX INVOICE &amp; PACKING LIST
+          {/* Consignee / Customer Details Box */}
+          <div className="border border-slate-300 rounded-lg p-3 mb-4 bg-slate-50/50 flex flex-col sm:flex-row justify-between text-[11px] gap-2">
+            <div>
+              <p className="text-[10px] uppercase font-bold text-slate-500">Consignee / Customer Name:</p>
+              <p className="text-sm font-black text-slate-900">{invoice.customer_name}</p>
+              {invoice.customer_phone && <p className="text-slate-600">Phone: {invoice.customer_phone}</p>}
+              {invoice.customer_address && <p className="text-slate-600">Address / Site: {invoice.customer_address}</p>}
+            </div>
+            <div className="sm:text-right space-y-0.5">
+              <p><span className="font-semibold text-slate-700">Vehicle No:</span> <span className="font-mono font-bold text-blue-900">{invoice.vehicle_no || invoice.vehicleNo || 'GJ-18-BW-7236'}</span></p>
+              <p><span className="font-semibold text-slate-700">Transport:</span> <span className="font-bold uppercase text-slate-800">{invoice.transport || 'ARRANGE'}</span></p>
+              <p><span className="font-semibold text-slate-700">Payment:</span> <span className="text-slate-800">{invoice.payment_method || 'Bank Transfer'}</span></p>
             </div>
           </div>
 
-          {/* Consignee, Vehicle & Transport Box */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 border border-slate-400 rounded-lg p-3.5 mb-4 text-[11px] bg-slate-50/60 gap-3">
-            <div className="space-y-1">
-              <p className="text-[10px] font-bold uppercase text-slate-500 tracking-wider">Consignee / Billed To:</p>
-              <p className="text-sm font-black text-slate-950">{invoice.customer_name}</p>
-              {invoice.customer_phone && (
-                <p className="text-slate-700"><span className="font-semibold">Phone:</span> {invoice.customer_phone}</p>
-              )}
-              {invoice.customer_address && (
-                <p className="text-slate-700"><span className="font-semibold">Site / Address:</span> {invoice.customer_address}</p>
-              )}
+          {/* EXACT TABLE STRUCTURE PER CLIENT SCREENSHOT */}
+          {/* Top Banner: client company name */}
+          <div className="border-2 border-slate-900 rounded-t-lg overflow-hidden">
+            <div className="bg-white py-3 px-4 text-center border-b-2 border-slate-900">
+              <h2 className="text-lg sm:text-xl font-black text-slate-950 uppercase tracking-wide">
+                {companyTitle}
+              </h2>
+              <p className="text-[10px] text-slate-600 font-semibold mt-0.5">
+                PLOT NO-163-164, SHOP 1-3, SN-138 NR. VENUS SOCIETY, ANTARJAL, GANDHIDHAM KUTCH GUJARAT-370205 • Mo: +91 91379 21191, 99982-55525
+              </p>
             </div>
 
-            <div className="sm:text-right space-y-1 sm:border-l sm:border-slate-200 sm:pl-4">
-              <p><span className="font-bold text-slate-700">DATE:</span> <span className="font-mono font-bold text-slate-950">{invoice.invoice_date}</span></p>
-              <p><span className="font-bold text-slate-700">INVOICE NO:</span> <span className="font-mono font-black text-slate-950">{invoice.invoice_number}</span></p>
-              <p><span className="font-bold text-slate-700">VEHICLE NO:</span> <span className="font-mono font-black text-blue-900">{invoice.vehicle_no || invoice.vehicleNo || 'GJ-18-BW-7236'}</span></p>
-              <p><span className="font-bold text-slate-700">TRANSPORT:</span> <span className="font-bold text-slate-900 uppercase">{invoice.transport || 'ARRANGE'}</span></p>
-              <p><span className="font-bold text-slate-700">PAYMENT:</span> <span className="font-semibold text-slate-800">{invoice.payment_method || 'Bank Transfer'}</span></p>
+            {/* DATE & INVOICE NO Row */}
+            <div className="flex justify-between items-center px-4 py-2 bg-slate-50 border-b-2 border-slate-900 text-xs font-bold text-slate-900">
+              <div>
+                <span>DATE: </span>
+                <span className="font-mono font-black underline decoration-slate-400 underline-offset-4">{invoice.invoice_date}</span>
+              </div>
+              <div>
+                <span>INVOICE NO: </span>
+                <span className="font-mono font-black underline decoration-slate-400 underline-offset-4">{invoice.invoice_number}</span>
+              </div>
             </div>
-          </div>
 
-          {/* Client Requested Packing List Table Format */}
-          {/* Columns: Sr.No | Vehicle No | Length | Width | Thick | Peace | Description | Specific | Total */}
-          <div className="overflow-x-auto mb-4 border border-slate-900 rounded-lg">
-            <table className="w-full text-left border-collapse text-[11px]">
-              <thead>
-                <tr className="bg-slate-900 text-white font-bold text-[10px] uppercase">
-                  <th className="py-2 px-2 text-center border-r border-slate-700 w-10">Sr.No</th>
-                  <th className="py-2 px-2 text-center border-r border-slate-700 w-24">Vehicle No</th>
-                  <th className="py-2 px-2 text-center border-r border-slate-700 w-14">Length</th>
-                  <th className="py-2 px-2 text-center border-r border-slate-700 w-14">Width</th>
-                  <th className="py-2 px-2 text-center border-r border-slate-700 w-14">Thick</th>
-                  <th className="py-2 px-2 text-center border-r border-slate-700 w-14">Peace</th>
-                  <th className="py-2 px-3 border-r border-slate-700">Description &amp; Specific</th>
-                  <th className="py-2 px-2 text-center border-r border-slate-700 w-20">CFT / Sq.Ft</th>
-                  <th className="py-2 px-2 text-right border-r border-slate-700 w-20">Rate (₹)</th>
-                  <th className="py-2 px-3 text-right w-24">Total (₹)</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-300">
-                {items.map((it, idx) => {
-                  const pcs = it.pieces || (it.total_cft ? it.quantity : it.quantity) || 1;
-                  const cftVal = it.total_cft || it.totalCft || 0;
-                  const rowVeh = it.vehicle_no || it.vehicleNo || invoice.vehicle_no || invoice.vehicleNo || '-';
-                  const len = it.length ? `${it.length}'` : '-';
-                  const wid = it.width ? `${it.width}"` : '-';
-                  const thk = it.thickness ? `${it.thickness}"` : '-';
+            {/* The 9-Column Table */}
+            {/* Columns: Sr.no | vechile no | length | width | peace | sq.ft | description | specific | Total */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-[11px]">
+                <thead>
+                  <tr className="bg-white border-b-2 border-slate-900 text-slate-950 font-black text-[11px]">
+                    <th className="py-2.5 px-2 text-center border-r border-slate-900 w-12">Sr.no</th>
+                    <th className="py-2.5 px-2 text-center border-r border-slate-900 w-28">vechile no</th>
+                    <th className="py-2.5 px-2 text-center border-r border-slate-900 w-16">length</th>
+                    <th className="py-2.5 px-2 text-center border-r border-slate-900 w-16">width</th>
+                    <th className="py-2.5 px-2 text-center border-r border-slate-900 w-16">peace</th>
+                    <th className="py-2.5 px-2 text-center border-r border-slate-900 w-20">sq.ft</th>
+                    <th className="py-2.5 px-3 border-r border-slate-900">description</th>
+                    <th className="py-2.5 px-3 border-r border-slate-900 w-28">specific</th>
+                    <th className="py-2.5 px-3 text-right w-28">Total</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-400">
+                  {items.map((it, idx) => {
+                    const pcs = it.pieces || (it.total_cft ? it.quantity : it.quantity) || 1;
+                    const len = it.length ? it.length : '';
+                    const wid = it.width ? it.width : '';
+                    const rowVeh = it.vehicle_no || it.vehicleNo || invoice.vehicle_no || invoice.vehicleNo || '-';
+                    
+                    // Calculation: length X width X peace / 144 = total sq.ft
+                    const calculatedSqFt = (len && wid && pcs)
+                      ? ((Number(len) * Number(wid) * Number(pcs)) / 144)
+                      : (Number(it.sqft || it.total_cft || it.totalCft || 0));
 
-                  return (
-                    <tr key={idx} className="hover:bg-slate-50">
-                      <td className="py-2 px-2 text-center font-bold text-slate-700 border-r border-slate-300">
-                        {idx + 1}
+                    const desc = it.item_name || it.itemName || '';
+                    const spec = it.item_description || it.itemDescription || it.specific || '-';
+                    const rowTot = Number(it.total_price || it.totalPrice || 0);
+
+                    return (
+                      <tr key={idx} className="hover:bg-slate-50/70">
+                        <td className="py-2 px-2 text-center font-bold text-slate-800 border-r border-slate-400">
+                          {idx + 1}
+                        </td>
+                        <td className="py-2 px-2 text-center font-mono font-bold text-slate-800 border-r border-slate-400">
+                          {rowVeh}
+                        </td>
+                        <td className="py-2 px-2 text-center font-mono border-r border-slate-400">
+                          {len || '-'}
+                        </td>
+                        <td className="py-2 px-2 text-center font-mono border-r border-slate-400">
+                          {wid || '-'}
+                        </td>
+                        <td className="py-2 px-2 text-center font-black text-slate-950 border-r border-slate-400">
+                          {pcs}
+                        </td>
+                        <td className="py-2 px-2 text-center font-mono font-black text-emerald-800 border-r border-slate-400">
+                          {calculatedSqFt > 0 ? Number(calculatedSqFt).toFixed(3) : '-'}
+                        </td>
+                        <td className="py-2 px-3 font-semibold text-slate-950 border-r border-slate-400">
+                          {desc}
+                        </td>
+                        <td className="py-2 px-3 text-slate-700 border-r border-slate-400">
+                          {spec}
+                        </td>
+                        <td className="py-2 px-3 text-right font-black text-slate-950">
+                          ₹{rowTot.toFixed(2)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+
+                  {/* Empty rows padding to match the clean Excel format of client screenshot */}
+                  {Array.from({ length: emptyRowsCount }).map((_, eIdx) => (
+                    <tr key={`empty-${eIdx}`} className="h-7 text-slate-300">
+                      <td className="border-r border-slate-400 text-center text-[10px] text-slate-300">
+                        {items.length + eIdx + 1}
                       </td>
-                      <td className="py-2 px-2 text-center font-mono font-bold text-slate-800 border-r border-slate-300">
-                        {rowVeh}
-                      </td>
-                      <td className="py-2 px-2 text-center font-mono border-r border-slate-300">
-                        {len}
-                      </td>
-                      <td className="py-2 px-2 text-center font-mono border-r border-slate-300">
-                        {wid}
-                      </td>
-                      <td className="py-2 px-2 text-center font-mono border-r border-slate-300">
-                        {thk}
-                      </td>
-                      <td className="py-2 px-2 text-center font-black text-slate-900 border-r border-slate-300">
-                        {pcs}
-                      </td>
-                      <td className="py-2 px-3 border-r border-slate-300">
-                        <p className="font-bold text-slate-950">{it.item_name || it.itemName}</p>
-                        {(it.item_description || it.itemDescription) && (
-                          <p className="text-[10px] text-slate-600 mt-0.5">
-                            {it.item_description || it.itemDescription}
-                          </p>
-                        )}
-                      </td>
-                      <td className="py-2 px-2 text-center font-mono font-bold text-emerald-800 border-r border-slate-300">
-                        {cftVal > 0 ? `${Number(cftVal).toFixed(3)}` : '-'}
-                      </td>
-                      <td className="py-2 px-2 text-right font-medium text-slate-800 border-r border-slate-300">
-                        ₹{Number(it.unit_price || it.unitPrice || 0).toFixed(2)}
-                      </td>
-                      <td className="py-2 px-3 text-right font-black text-slate-950">
-                        ₹{Number(it.total_price || it.totalPrice || 0).toFixed(2)}
-                      </td>
+                      <td className="border-r border-slate-400"></td>
+                      <td className="border-r border-slate-400"></td>
+                      <td className="border-r border-slate-400"></td>
+                      <td className="border-r border-slate-400"></td>
+                      <td className="border-r border-slate-400"></td>
+                      <td className="border-r border-slate-400"></td>
+                      <td className="border-r border-slate-400"></td>
+                      <td></td>
                     </tr>
-                  );
-                })}
-              </tbody>
-              <tfoot>
-                <tr className="bg-slate-100 font-bold border-t-2 border-slate-900 text-[10px] text-slate-900 uppercase">
-                  <td colSpan="5" className="py-2 px-3 text-right">TOTAL:</td>
-                  <td className="py-2 px-2 text-center font-black text-slate-950">{totalPcs} Peace</td>
-                  <td></td>
-                  <td className="py-2 px-2 text-center font-mono font-black text-emerald-800">
-                    {totalVolume > 0 ? `${totalVolume.toFixed(3)} CFT` : '-'}
-                  </td>
-                  <td></td>
-                  <td className="py-2 px-3 text-right font-black text-slate-950">
-                    ₹{subtotal.toFixed(2)}
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="bg-slate-100 font-bold border-t-2 border-slate-900 text-xs text-slate-950">
+                    <td colSpan="4" className="py-2.5 px-3 text-right font-bold uppercase">
+                      Total Peace &amp; Sq.Ft:
+                    </td>
+                    <td className="py-2.5 px-2 text-center font-black text-slate-950">
+                      {totalPcs}
+                    </td>
+                    <td className="py-2.5 px-2 text-center font-mono font-black text-emerald-800">
+                      {totalSqFt > 0 ? totalSqFt.toFixed(3) : '-'}
+                    </td>
+                    <td colSpan="2" className="py-2.5 px-3 text-right font-bold uppercase">
+                      Subtotal:
+                    </td>
+                    <td className="py-2.5 px-3 text-right font-black text-slate-950">
+                      ₹{subtotal.toFixed(2)}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
           </div>
 
-          {/* Calculation Summary: Conditional GST */}
-          <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-6">
+          {/* Bottom Summary: Conditional GST */}
+          <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mt-4 mb-6">
             <div className="w-full sm:w-1/2 space-y-1 text-[11px] text-slate-600">
-              <p><span className="font-bold text-slate-800">Calculation Formula:</span> Length (ft) × Width (in) × Pieces / 144 = Total CFT</p>
+              <p className="font-mono text-[10px] text-slate-500">
+                Calculation: length × width × peace / 144 = total sq.ft
+              </p>
               {invoice.notes && (
                 <p><span className="font-bold text-slate-800">Remarks:</span> {invoice.notes}</p>
               )}
@@ -253,7 +281,7 @@ export default function PrintBillModal({ isOpen, onClose, invoice, firm, onEdit 
                 <span className="font-bold text-slate-900">₹{subtotal.toFixed(2)}</span>
               </div>
 
-              {/* Dynamic GST Row: ONLY rendered if taxRate > 0 */}
+              {/* DYNAMIC CONDITIONAL GST: If taxRate > 0, show GST row. If No GST, no row appears! */}
               {taxRate > 0 && (
                 <div className="flex justify-between text-slate-700">
                   <span>GST ({taxRate}%):</span>
@@ -285,13 +313,10 @@ export default function PrintBillModal({ isOpen, onClose, invoice, firm, onEdit 
 
           {/* Footer Terms & Signatory */}
           <div className="border-t border-slate-300 pt-4 flex justify-between items-end text-[10px] text-slate-600">
-            <div className="max-w-xs space-y-1">
+            <div className="max-w-xs space-y-0.5">
               <p className="font-bold text-slate-800">Terms &amp; Conditions:</p>
               <p>1. Goods once sold will not be taken back.</p>
-              <p>2. Payment due strictly within terms.</p>
-              <p className="text-[9px] text-emerald-700 font-mono mt-1">
-                Micro-optimized vector document (~5 KB) • Electronically Verified
-              </p>
+              <p>2. Subject to Gandhidham jurisdiction.</p>
             </div>
             <div className="text-right">
               <div className="h-10 border-b border-slate-500 w-44 mb-1 ml-auto"></div>

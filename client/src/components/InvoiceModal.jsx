@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Plus, Trash2, Receipt, ShieldCheck, Calculator, Ruler, Layers } from 'lucide-react';
-import { calculateCft, calculateTotalCft, isPlywoodItem } from '../utils/woodCalculator';
+import { isPlywoodItem } from '../utils/woodCalculator';
 
 export default function InvoiceModal({ 
   isOpen, 
@@ -31,19 +31,18 @@ export default function InvoiceModal({
   const [notes, setNotes] = useState('');
   const [autoDeductStock, setAutoDeductStock] = useState(true);
 
-  // Line items
+  // Line items matching client sample table:
+  // Sr.no | vechile no | length | width | peace | sq.ft | description | specific | Total
   const [items, setItems] = useState([
     { 
       itemId: '', 
-      itemName: '', 
-      itemDescription: '', 
       vehicleNo: '',
       length: '', 
       width: '', 
-      thickness: '', 
-      cftPerPiece: 0, 
-      pieces: 1, 
-      totalCft: 0, 
+      pieces: 1, // peace
+      sqft: 0,   // calculated as length * width * peace / 144
+      itemName: '', 
+      itemDescription: '', // specific
       unitPrice: 0 
     }
   ]);
@@ -76,15 +75,13 @@ export default function InvoiceModal({
       if (invoiceToEdit.items && invoiceToEdit.items.length > 0) {
         setItems(invoiceToEdit.items.map(it => ({
           itemId: it.item_id || it.itemId || '',
-          itemName: it.item_name || it.itemName || '',
-          itemDescription: it.item_description || it.itemDescription || '',
           vehicleNo: it.vehicle_no || it.vehicleNo || invoiceToEdit.vehicle_no || '',
           length: it.length || '',
           width: it.width || '',
-          thickness: it.thickness || '',
-          cftPerPiece: it.cft || 0,
           pieces: it.pieces || it.quantity || 1,
-          totalCft: it.total_cft || it.totalCft || 0,
+          sqft: it.sqft || it.total_cft || it.totalCft || calculateSqFtFormula(it.length, it.width, it.pieces || 1),
+          itemName: it.item_name || it.itemName || '',
+          itemDescription: it.item_description || it.itemDescription || it.specific || '',
           unitPrice: Number(it.unit_price || it.unitPrice || 0)
         })));
       }
@@ -106,15 +103,13 @@ export default function InvoiceModal({
       setItems([
         { 
           itemId: '', 
-          itemName: '', 
-          itemDescription: '', 
           vehicleNo: '',
           length: '', 
           width: '', 
-          thickness: '', 
-          cftPerPiece: 0, 
           pieces: 1, 
-          totalCft: 0, 
+          sqft: 0, 
+          itemName: '', 
+          itemDescription: '', 
           unitPrice: 0 
         }
       ]);
@@ -123,18 +118,14 @@ export default function InvoiceModal({
 
   if (!isOpen) return null;
 
-  // Formula: Length (ft) * Width (in) * (Thickness > 0 ? Thickness : 1) * Pieces / 144 = Total CFT
-  const calculateWoodVolume = (len, wid, thk, pcs) => {
+  // Client's exact formula: length X width X peace / 144 = total sq.ft
+  function calculateSqFtFormula(len, wid, pcs) {
     const l = parseFloat(len) || 0;
     const w = parseFloat(wid) || 0;
-    const t = parseFloat(thk) || 0;
     const p = parseFloat(pcs) || 1;
-
     if (l <= 0 || w <= 0) return 0;
-    const thicknessMultiplier = t > 0 ? t : 1;
-    // Standard timber CFT formula: (Length in ft * Width in inches * Thickness in inches * pieces) / 144
-    return (l * w * thicknessMultiplier * p) / 144;
-  };
+    return (l * w * p) / 144;
+  }
 
   const handleItemChange = (index, field, value) => {
     const updated = [...items];
@@ -149,17 +140,13 @@ export default function InvoiceModal({
         row.itemDescription = selectedProduct.description || '';
         row.length = selectedProduct.length || '';
         row.width = selectedProduct.width || '';
-        row.thickness = selectedProduct.thickness || '';
         row.unitPrice = Number(selectedProduct.selling_price) || 0;
       }
     }
 
-    // Auto calculate volume when dimensions or pieces change
-    if (field === 'length' || field === 'width' || field === 'thickness' || field === 'pieces' || field === 'itemId') {
-      const calculatedTot = calculateWoodVolume(row.length, row.width, row.thickness, row.pieces || 1);
-      row.totalCft = calculatedTot;
-      const singlePieceCft = calculateWoodVolume(row.length, row.width, row.thickness, 1);
-      row.cftPerPiece = singlePieceCft;
+    // Auto calculate sq.ft when length, width, or pieces (peace) change
+    if (field === 'length' || field === 'width' || field === 'pieces' || field === 'itemId') {
+      row.sqft = calculateSqFtFormula(row.length, row.width, row.pieces || 1);
     }
 
     updated[index] = row;
@@ -171,15 +158,13 @@ export default function InvoiceModal({
       ...items, 
       { 
         itemId: '', 
-        itemName: '', 
-        itemDescription: '', 
         vehicleNo: vehicleNo || '',
         length: '', 
         width: '', 
-        thickness: '', 
-        cftPerPiece: 0, 
         pieces: 1, 
-        totalCft: 0, 
+        sqft: 0, 
+        itemName: '', 
+        itemDescription: '', 
         unitPrice: 0 
       }
     ]);
@@ -190,14 +175,14 @@ export default function InvoiceModal({
     setItems(items.filter((_, i) => i !== index));
   };
 
-  // Row total: if totalCft > 0, price is totalCft * rate. Otherwise pieces * rate.
+  // Row total: sqft * rate (or pieces * rate if sqft is 0)
   const getRowTotal = (row) => {
     const rate = Number(row.unitPrice || 0);
-    const totCft = Number(row.totalCft || 0);
+    const sqftVal = Number(row.sqft || 0);
     const pcs = Number(row.pieces || 0);
 
-    if (totCft > 0) {
-      return totCft * rate;
+    if (sqftVal > 0) {
+      return sqftVal * rate;
     }
     return pcs * rate;
   };
@@ -208,7 +193,7 @@ export default function InvoiceModal({
   const taxAmount = (subtotal * activeTaxRate) / 100;
   const grandTotal = Math.max(0, subtotal + taxAmount - Number(discountAmount || 0));
   const totalPiecesSum = items.reduce((acc, it) => acc + (Number(it.pieces) || 0), 0);
-  const totalCftSum = items.reduce((acc, it) => acc + (Number(it.totalCft) || 0), 0);
+  const totalSqFtSum = items.reduce((acc, it) => acc + (Number(it.sqft) || 0), 0);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -217,22 +202,22 @@ export default function InvoiceModal({
       return;
     }
     if (items.some(it => !it.itemName.trim() || Number(it.pieces) <= 0)) {
-      alert('Please fill all item names and positive piece quantities');
+      alert('Please fill all item names and valid peace quantities');
       return;
     }
 
     const formattedItems = items.map(it => ({
       itemId: it.itemId || null,
-      itemName: it.itemName.trim(),
-      itemDescription: (it.itemDescription || '').trim(),
       vehicleNo: (it.vehicleNo || vehicleNo || '').trim(),
       length: parseFloat(it.length) || 0,
       width: parseFloat(it.width) || 0,
-      thickness: parseFloat(it.thickness) || 0,
-      cft: parseFloat(it.cftPerPiece) || 0,
       pieces: parseFloat(it.pieces) || 1,
-      totalCft: parseFloat(it.totalCft) || 0,
-      quantity: parseFloat(it.totalCft) > 0 ? parseFloat(it.totalCft) : parseFloat(it.pieces),
+      sqft: parseFloat(it.sqft) || calculateSqFtFormula(it.length, it.width, it.pieces),
+      total_cft: parseFloat(it.sqft) || calculateSqFtFormula(it.length, it.width, it.pieces),
+      itemName: it.itemName.trim(),
+      itemDescription: (it.itemDescription || '').trim(),
+      specific: (it.itemDescription || '').trim(),
+      quantity: parseFloat(it.sqft) > 0 ? parseFloat(it.sqft) : parseFloat(it.pieces),
       unitPrice: Number(it.unitPrice) || 0,
       totalPrice: getRowTotal(it)
     }));
@@ -253,7 +238,7 @@ export default function InvoiceModal({
       taxAmount,
       totalAmount: grandTotal,
       totalPieces: totalPiecesSum,
-      totalCft: totalCftSum,
+      totalSqFt: totalSqFtSum,
       notes,
       autoDeductStock,
       items: formattedItems
@@ -296,10 +281,10 @@ export default function InvoiceModal({
             </div>
             <div>
               <h2 className="text-base font-black tracking-tight">
-                {invoiceToEdit ? 'Edit Commercial Bill / Packing List' : (isAshapura ? 'Generate Wood & Plywood Bill' : 'Generate Wood & Timber Bill')}
+                {invoiceToEdit ? 'Edit Customer Invoice / Bill' : 'Generate Customer Bill'}
               </h2>
-              <p className="text-[11px] text-slate-400">
-                Formula: Length (ft) × Width (in) × Pieces / 144 = Total CFT • Conditional GST
+              <p className="text-[11px] text-slate-400 font-mono">
+                Calculation: length × width × peace / 144 = total sq.ft
               </p>
             </div>
           </div>
@@ -309,10 +294,10 @@ export default function InvoiceModal({
         </div>
 
         <form onSubmit={handleSubmit} className="p-5 sm:p-6 space-y-4 max-h-[85vh] overflow-y-auto">
-          {/* Client & Consignee Details */}
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-            <div className="sm:col-span-2">
-              <label className="block text-xs font-bold text-slate-700 mb-1">Customer / Consignee Name *</label>
+          {/* Customer Details Box per user's 1st image */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Customer / Client Name *</label>
               <input
                 type="text"
                 required
@@ -328,7 +313,7 @@ export default function InvoiceModal({
                 type="text"
                 value={customerPhone}
                 onChange={(e) => setCustomerPhone(e.target.value)}
-                placeholder="+91 98765 43210"
+                placeholder="+91-9876543210"
                 className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none"
               />
             </div>
@@ -344,7 +329,6 @@ export default function InvoiceModal({
             </div>
           </div>
 
-          {/* Delivery Site, Vehicle & Transport */}
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
             <div className="sm:col-span-2">
               <label className="block text-xs font-semibold text-slate-700 mb-1">Delivery Site / Address</label>
@@ -357,35 +341,12 @@ export default function InvoiceModal({
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-800 mb-1">Vehicle No (e.g. Truck)</label>
-              <input
-                type="text"
-                value={vehicleNo}
-                onChange={(e) => setVehicleNo(e.target.value.toUpperCase())}
-                placeholder="e.g. GJ-18-BW-7236"
-                className="w-full text-xs px-3 py-2 border border-amber-300 bg-amber-50/40 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none font-mono font-bold"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Transport Mode</label>
-              <input
-                type="text"
-                value={transport}
-                onChange={(e) => setTransport(e.target.value)}
-                placeholder="ARRANGE / Roadways"
-                className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:outline-none font-semibold uppercase"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">Invoice Date</label>
               <input
                 type="date"
                 value={invoiceDate}
                 onChange={(e) => setInvoiceDate(e.target.value)}
-                className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:outline-none"
+                className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:outline-none font-medium"
               />
             </div>
             <div>
@@ -395,8 +356,8 @@ export default function InvoiceModal({
                 onChange={(e) => setPaymentMethod(e.target.value)}
                 className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg bg-white focus:outline-none"
               >
-                <option value="Bank Transfer">Bank Transfer (NEFT/RTGS)</option>
-                <option value="UPI">UPI / GPay</option>
+                <option value="Bank Transfer (NEFT/RTGS)">Bank Transfer (NEFT/RTGS)</option>
+                <option value="UPI">UPI</option>
                 <option value="Cash">Cash</option>
                 <option value="Cheque">Cheque</option>
                 <option value="Credit / Later">Credit / Net 30</option>
@@ -404,16 +365,41 @@ export default function InvoiceModal({
             </div>
           </div>
 
-          {/* Line Items for Timber with Pieces, Dimensions & CFT */}
+          {/* Vehicle and Transport Row */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+            <div>
+              <label className="block text-xs font-bold text-slate-800 mb-1">Vehicle No (vechile no)</label>
+              <input
+                type="text"
+                value={vehicleNo}
+                onChange={(e) => setVehicleNo(e.target.value.toUpperCase())}
+                placeholder="e.g. GJ-18-BW-7236"
+                className="w-full text-xs px-3 py-1.5 border border-amber-300 bg-white rounded-lg font-mono font-bold"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Transport</label>
+              <input
+                type="text"
+                value={transport}
+                onChange={(e) => setTransport(e.target.value)}
+                placeholder="ARRANGE / Direct"
+                className="w-full text-xs px-3 py-1.5 border border-slate-300 bg-white rounded-lg uppercase"
+              />
+            </div>
+          </div>
+
+          {/* Table Line Items matching client sample Excel columns */}
+          {/* Columns: Sr.no | vechile no | length | width | peace | sq.ft | description | specific | Total */}
           <div className="border border-slate-200 rounded-xl p-3 sm:p-4 bg-slate-50/70">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-black uppercase tracking-wider text-slate-800">
-                  Bill Line Items (Packing List)
+                  Bill Items Table
                 </span>
                 {totalPiecesSum > 0 && (
                   <span className="text-[10px] font-mono font-bold bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full border border-amber-300">
-                    Total: {totalPiecesSum} Peace • {totalCftSum.toFixed(3)} CFT
+                    Total: {totalPiecesSum} Peace • {totalSqFtSum.toFixed(3)} sq.ft
                   </span>
                 )}
               </div>
@@ -423,7 +409,7 @@ export default function InvoiceModal({
                 className="flex items-center space-x-1 text-xs font-bold text-amber-700 hover:text-amber-800 transition"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>+ Add Item Row</span>
+                <span>+ Add Row</span>
               </button>
             </div>
 
@@ -444,18 +430,18 @@ export default function InvoiceModal({
                     )}
                   </div>
 
-                  {/* Stock Picker + Item Name */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  {/* Description & Specific */}
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
                     <div>
                       <select
                         value={row.itemId}
                         onChange={(e) => handleItemChange(idx, 'itemId', e.target.value)}
                         className="w-full text-xs px-2.5 py-1.5 border border-slate-300 rounded-lg bg-slate-50"
                       >
-                        <option value="">-- Catalog Item (Optional) --</option>
+                        <option value="">-- Catalog (Optional) --</option>
                         {availableItems.map(inv => (
                           <option key={inv.id} value={inv.id}>
-                            {inv.name} ({inv.cft ? `${inv.cft} ${isPlywoodItem(inv) ? 'Sq.Ft' : 'CFT'}` : inv.unit})
+                            {inv.name}
                           </option>
                         ))}
                       </select>
@@ -465,76 +451,63 @@ export default function InvoiceModal({
                       <input
                         type="text"
                         required
-                        placeholder="Item Name (e.g. Teak Sawn Timber Planks)"
+                        placeholder="description (e.g. Teak Sawn Timber Planks)"
                         value={row.itemName}
                         onChange={(e) => handleItemChange(idx, 'itemName', e.target.value)}
                         className="w-full text-xs px-3 py-1.5 border border-slate-300 rounded-lg font-bold text-slate-900"
                       />
                     </div>
-                  </div>
 
-                  {/* Item Description (User requested: also item description) */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                    <div className="sm:col-span-2">
+                    <div>
                       <input
                         type="text"
-                        placeholder="Item Description / Specific (e.g. Kiln Seasoned, Grade-A, Termite Free)"
+                        placeholder="specific (e.g. Grade A)"
                         value={row.itemDescription}
                         onChange={(e) => handleItemChange(idx, 'itemDescription', e.target.value)}
                         className="w-full text-xs px-3 py-1.5 border border-slate-200 rounded-lg text-slate-600 bg-slate-50/50"
                       />
                     </div>
-                    <div>
-                      <input
-                        type="text"
-                        placeholder="Vehicle No (optional if different)"
-                        value={row.vehicleNo}
-                        onChange={(e) => handleItemChange(idx, 'vehicleNo', e.target.value.toUpperCase())}
-                        className="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded-lg text-slate-600 font-mono"
-                      />
-                    </div>
                   </div>
 
-                  {/* Wood Dimensions (L, W, T, Pieces, CFT, Rate, Amount) */}
-                  <div className="grid grid-cols-3 sm:grid-cols-7 gap-2 items-center bg-amber-50/50 p-2.5 rounded-lg border border-amber-200/60">
+                  {/* Calculations Grid: vechile no | length | width | peace | sq.ft | Rate | Total */}
+                  <div className="grid grid-cols-2 sm:grid-cols-7 gap-2 items-center bg-amber-50/50 p-2.5 rounded-lg border border-amber-200/60">
                     <div>
-                      <label className="block text-[10px] font-semibold text-amber-900">Length (ft)</label>
+                      <label className="block text-[10px] font-semibold text-slate-700">vechile no</label>
+                      <input
+                        type="text"
+                        placeholder={vehicleNo || 'Vehicle'}
+                        value={row.vehicleNo}
+                        onChange={(e) => handleItemChange(idx, 'vehicleNo', e.target.value.toUpperCase())}
+                        className="w-full text-xs px-2 py-1 bg-white border border-slate-300 rounded font-mono text-center"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-semibold text-amber-900">length</label>
                       <input
                         type="number"
                         step="any"
-                        placeholder="e.g. 10"
+                        placeholder="Length"
                         value={row.length}
                         onChange={(e) => handleItemChange(idx, 'length', e.target.value)}
-                        className="w-full text-xs px-2 py-1 bg-white border border-amber-300 rounded text-center"
+                        className="w-full text-xs px-2 py-1 bg-white border border-amber-300 rounded text-center font-bold"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-[10px] font-semibold text-amber-900">Width (in)</label>
+                      <label className="block text-[10px] font-semibold text-amber-900">width</label>
                       <input
                         type="number"
                         step="any"
-                        placeholder="e.g. 4"
+                        placeholder="Width"
                         value={row.width}
                         onChange={(e) => handleItemChange(idx, 'width', e.target.value)}
-                        className="w-full text-xs px-2 py-1 bg-white border border-amber-300 rounded text-center"
+                        className="w-full text-xs px-2 py-1 bg-white border border-amber-300 rounded text-center font-bold"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-[10px] font-semibold text-amber-900">Thick (in)</label>
-                      <input
-                        type="number"
-                        step="any"
-                        placeholder="e.g. 2"
-                        value={row.thickness}
-                        onChange={(e) => handleItemChange(idx, 'thickness', e.target.value)}
-                        className="w-full text-xs px-2 py-1 bg-white border border-amber-300 rounded text-center"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-[10px] font-bold text-amber-900">Peace (Pcs) *</label>
+                      <label className="block text-[10px] font-bold text-amber-900">peace *</label>
                       <input
                         type="number"
                         min="1"
@@ -548,18 +521,18 @@ export default function InvoiceModal({
                     </div>
 
                     <div>
-                      <label className="block text-[10px] font-bold text-emerald-900">Total CFT</label>
-                      <div className="w-full text-xs py-1 px-1.5 bg-emerald-100/70 border border-emerald-300 rounded text-center font-mono font-black text-emerald-800">
-                        {Number(row.totalCft || 0).toFixed(3)}
+                      <label className="block text-[10px] font-bold text-emerald-900">sq.ft (L×W×P/144)</label>
+                      <div className="w-full text-xs py-1 px-1 bg-emerald-100/80 border border-emerald-300 rounded text-center font-mono font-black text-emerald-900">
+                        {Number(row.sqft || 0).toFixed(3)}
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-[10px] font-semibold text-slate-700">Rate (₹ / {row.totalCft > 0 ? 'CFT' : 'Pc'})</label>
+                      <label className="block text-[10px] font-semibold text-slate-700">Rate (₹)</label>
                       <input
                         type="number"
                         step="0.01"
-                        placeholder="Price"
+                        placeholder="Rate"
                         value={row.unitPrice}
                         onChange={(e) => handleItemChange(idx, 'unitPrice', e.target.value)}
                         className="w-full text-xs px-2 py-1 bg-white border border-slate-300 rounded text-right font-bold"
@@ -567,7 +540,7 @@ export default function InvoiceModal({
                     </div>
 
                     <div>
-                      <label className="block text-[10px] font-bold text-slate-900 text-right">Amount (₹)</label>
+                      <label className="block text-[10px] font-bold text-slate-900 text-right">Total (₹)</label>
                       <div className="w-full text-xs py-1 font-black text-slate-900 text-right">
                         ₹{getRowTotal(row).toFixed(2)}
                       </div>
@@ -578,10 +551,9 @@ export default function InvoiceModal({
             </div>
           </div>
 
-          {/* Conditional Dynamic GST & Summary Section */}
+          {/* Conditional GST Section (User requested: remove static GST, option Yes/No, if Yes enter % else no field) */}
           <div className="flex flex-col sm:flex-row justify-between items-start gap-4 pt-2">
             <div className="w-full sm:w-1/2 space-y-3">
-              {/* Dynamic GST Option Selector (User requested: remove static GST, give option GST Yes/No) */}
               <div className="bg-slate-100/80 p-3 rounded-xl border border-slate-200 space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-slate-800">Apply GST on this Bill?</span>
@@ -594,7 +566,7 @@ export default function InvoiceModal({
                         onChange={() => { setApplyGst(false); setTaxRate(0); }}
                         className="text-amber-600 focus:ring-amber-500"
                       />
-                      <span className="font-semibold text-slate-700">No GST (0%)</span>
+                      <span className="font-semibold text-slate-700">No (0% GST)</span>
                     </label>
                     <label className="flex items-center space-x-1.5 cursor-pointer">
                       <input
@@ -609,8 +581,9 @@ export default function InvoiceModal({
                   </div>
                 </div>
 
+                {/* If Yes: field appears to enter percentage */}
                 {applyGst && (
-                  <div className="pt-2 border-t border-slate-200 flex items-center justify-between animate-fadeIn">
+                  <div className="pt-2 border-t border-slate-200 flex items-center justify-between">
                     <label className="text-xs font-semibold text-slate-700">Enter GST Percentage (%)</label>
                     <div className="flex items-center space-x-1.5">
                       <input
@@ -630,13 +603,13 @@ export default function InvoiceModal({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Invoice Remarks / Notes</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Invoice Remarks</label>
                 <textarea
                   rows="2"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Terms of delivery, loading/unloading charges, transportation details..."
-                  className="w-full text-xs p-2.5 border border-slate-300 rounded-lg focus:outline-none"
+                  placeholder="Terms of delivery, loading/unloading..."
+                  className="w-full text-xs p-2 border border-slate-300 rounded-lg focus:outline-none"
                 ></textarea>
               </div>
 
@@ -654,15 +627,15 @@ export default function InvoiceModal({
               </div>
             </div>
 
-            {/* Calculations Box */}
+            {/* Totals Summary */}
             <div className="w-full sm:w-80 bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2 text-xs">
               <div className="flex justify-between items-center text-slate-600">
-                <span>Total Pieces:</span>
-                <span className="font-bold text-slate-900 font-mono">{totalPiecesSum} Peace</span>
+                <span>Total Peace:</span>
+                <span className="font-bold text-slate-900 font-mono">{totalPiecesSum}</span>
               </div>
               <div className="flex justify-between items-center text-slate-600">
-                <span>Total CFT Volume:</span>
-                <span className="font-bold text-emerald-700 font-mono">{totalCftSum.toFixed(3)} CFT</span>
+                <span>Total sq.ft:</span>
+                <span className="font-bold text-emerald-700 font-mono">{totalSqFtSum.toFixed(3)}</span>
               </div>
               <div className="border-t border-slate-200 my-1"></div>
               <div className="flex justify-between items-center text-slate-600">
@@ -674,12 +647,8 @@ export default function InvoiceModal({
               {applyGst && activeTaxRate > 0 && (
                 <>
                   <div className="flex justify-between items-center text-slate-600">
-                    <span>GST Tax Rate:</span>
-                    <span className="font-bold text-slate-800">{activeTaxRate}%</span>
-                  </div>
-                  <div className="flex justify-between items-center text-slate-600">
-                    <span>GST Tax Amount:</span>
-                    <span>₹{taxAmount.toFixed(2)}</span>
+                    <span>GST ({activeTaxRate}%):</span>
+                    <span className="font-bold text-slate-800">₹{taxAmount.toFixed(2)}</span>
                   </div>
                 </>
               )}

@@ -1,11 +1,10 @@
 /**
  * Client-Side Ultra-Lightweight Vector PDF Generator for Shashwat Group CRM
  * 
- * DESIGN PRINCIPLE:
- *  - Runs 100% in the browser with ZERO external heavy libraries.
- *  - Generates true standard PDF 1.4 binary documents using PostScript core fonts (Helvetica).
- *  - File size: 4 KB to 8 KB per invoice (Over 99% smaller than standard 3MB-5MB PDFs).
- *  - Fast direct file download and WhatsApp PDF attachment.
+ * Generates valid standard PDF 1.4 binary documents (< 8 KB)
+ * Strictly matches client Excel sample table:
+ * Sr.no | vechile no | length | width | peace | sq.ft | description | specific | Total
+ * Calculation: length * width * peace / 144 = total sq.ft
  */
 
 class ClientMicroPdfGenerator {
@@ -24,99 +23,104 @@ class ClientMicroPdfGenerator {
     const streamCommands = [];
 
     // Colors (RGB in 0.0 - 1.0 range)
-    const primaryColor = '0.12 0.23 0.38'; // Dark Navy (#1f3a60)
-    const grayColor = '0.45 0.45 0.45';
+    const darkColor = '0.08 0.12 0.18';
+    const grayColor = '0.40 0.40 0.40';
     const lightBg = '0.96 0.97 0.98';
-    const borderColor = '0.85 0.87 0.90';
+    const borderColor = '0.20 0.20 0.20';
 
-    // Top Header Banner
-    streamCommands.push(`${primaryColor} rg`);
-    streamCommands.push(`0 760 595 82 re f`);
+    // Top Auspicious line
+    streamCommands.push(`0 0 0 rg`);
+    streamCommands.push(`BT /F2 10 Tf 240 818 Td (|| Shree Ganeshay Namah ||) Tj ET`);
 
-    // Header Text (White)
-    const firmName = invoice.firm_name || (invoice.customer_name?.includes('Plywood') ? 'SHASHWAT ASHAPURA WOODS' : 'SHASHWAT GROUP');
+    // Top Title Box: client company name
+    const firmName = invoice.firm_name || (invoice.customer_name?.includes('Plywood') ? 'SHASHWAT ASHAPURA WOODS' : 'SHASHWAT WOODS');
+    streamCommands.push(`${darkColor} rg`);
+    streamCommands.push(`40 760 515 50 re f`);
     streamCommands.push(`1 1 1 rg`);
-    streamCommands.push(`BT /F2 18 Tf 40 812 Td (${this.escapePdfText(firmName)}) Tj ET`);
-    streamCommands.push(`BT /F1 8 Tf 40 798 Td (PLOT NO-163-164, SHOP 1-3, SN-138 NR. VENUS SOCIETY, GANDHIDHAM KUTCH GUJARAT-370205) Tj ET`);
-    streamCommands.push(`BT /F1 8 Tf 40 786 Td (Mo: +91 91379 21191, +91 99982 55525) Tj ET`);
-    streamCommands.push(`BT /F2 15 Tf 410 812 Td (TAX INVOICE) Tj ET`);
-    streamCommands.push(`BT /F1 8 Tf 410 798 Td (& PACKING LIST) Tj ET`);
+    streamCommands.push(`BT /F2 16 Tf 50 790 Td (${this.escapePdfText(firmName)}) Tj ET`);
+    streamCommands.push(`BT /F1 8 Tf 50 772 Td (PLOT NO-163-164, SHOP 1-3, SN-138 NR. VENUS SOCIETY, GANDHIDHAM KUTCH GUJARAT-370205) Tj ET`);
+    streamCommands.push(`BT /F2 8 Tf 430 790 Td (TAX INVOICE & BILL) Tj ET`);
+    streamCommands.push(`BT /F1 8 Tf 430 772 Td (Mo: 91379 21191, 99982 55525) Tj ET`);
 
-    // Client / Consignee Details (Left Column)
+    // Consignee & Header Box
     streamCommands.push(`0 0 0 rg`);
-    streamCommands.push(`BT /F2 10 Tf 40 735 Td (CONSIGNEE / BILLED TO:) Tj ET`);
-    streamCommands.push(`BT /F2 12 Tf 40 718 Td (${this.escapePdfText(invoice.customer_name || invoice.customerName)}) Tj ET`);
-
-    const clientPhone = invoice.customer_phone || invoice.customerPhone || 'N/A';
-    const clientAddress = invoice.customer_address || invoice.customerAddress || 'N/A';
+    streamCommands.push(`BT /F2 9 Tf 40 740 Td (CUSTOMER / CONSIGNEE:) Tj ET`);
+    streamCommands.push(`BT /F2 11 Tf 40 726 Td (${this.escapePdfText(invoice.customer_name || invoice.customerName)}) Tj ET`);
+    const cPhone = invoice.customer_phone || invoice.customerPhone || '';
+    const cAddr = invoice.customer_address || invoice.customerAddress || '';
     streamCommands.push(`${grayColor} rg`);
-    streamCommands.push(`BT /F1 9 Tf 40 702 Td (Phone: ${this.escapePdfText(clientPhone)}  |  Site: ${this.escapePdfText(clientAddress.slice(0, 35))}) Tj ET`);
+    streamCommands.push(`BT /F1 8 Tf 40 712 Td (Phone: ${this.escapePdfText(cPhone)} | Address: ${this.escapePdfText(cAddr.slice(0, 45))}) Tj ET`);
 
-    // Invoice Meta & Vehicle Details (Right Column)
+    // DATE & INVOICE NO Row (Matching client table)
     const vehNo = invoice.vehicle_no || invoice.vehicleNo || 'GJ-18-BW-7236';
-    const transport = invoice.transport || 'ARRANGE';
     streamCommands.push(`0 0 0 rg`);
-    streamCommands.push(`BT /F2 10 Tf 370 735 Td (Invoice No: ${this.escapePdfText(invoice.invoice_number || invoice.invoiceNumber)}) Tj ET`);
-    streamCommands.push(`BT /F1 9 Tf 370 718 Td (Date: ${this.escapePdfText(invoice.invoice_date || invoice.invoiceDate)}  |  Status: ${this.escapePdfText(invoice.status || 'ISSUED')}) Tj ET`);
-    streamCommands.push(`BT /F2 9 Tf 370 702 Td (Vehicle No: ${this.escapePdfText(vehNo)}  |  Transport: ${this.escapePdfText(transport)}) Tj ET`);
+    streamCommands.push(`BT /F2 9 Tf 360 740 Td (DATE: ${this.escapePdfText(invoice.invoice_date || invoice.invoiceDate)}) Tj ET`);
+    streamCommands.push(`BT /F2 9 Tf 360 726 Td (INVOICE NO: ${this.escapePdfText(invoice.invoice_number || invoice.invoiceNumber)}) Tj ET`);
+    streamCommands.push(`BT /F1 8 Tf 360 712 Td (Vehicle No: ${this.escapePdfText(vehNo)} | Transport: ${this.escapePdfText(invoice.transport || 'ARRANGE')}) Tj ET`);
 
-    // Divider Line
-    streamCommands.push(`${borderColor} RG 1 w`);
-    streamCommands.push(`40 685 m 555 685 l S`);
-
-    // Table Header Box (Packing list columns)
+    // 9-Column Table Header Box per client screenshot
+    // Sr.no | vechile no | length | width | peace | sq.ft | description | specific | Total
     streamCommands.push(`${lightBg} rg`);
-    streamCommands.push(`40 655 515 22 re f`);
-    streamCommands.push(`${primaryColor} rg`);
-    streamCommands.push(`BT /F2 8 Tf 45 662 Td (#) Tj ET`);
-    streamCommands.push(`BT /F2 8 Tf 65 662 Td (ITEM DESCRIPTION & SPECS) Tj ET`);
-    streamCommands.push(`BT /F2 8 Tf 270 662 Td (DIMS (LxWxT)) Tj ET`);
-    streamCommands.push(`BT /F2 8 Tf 350 662 Td (PEACE) Tj ET`);
-    streamCommands.push(`BT /F2 8 Tf 400 662 Td (CFT) Tj ET`);
-    streamCommands.push(`BT /F2 8 Tf 450 662 Td (RATE) Tj ET`);
-    streamCommands.push(`BT /F2 8 Tf 505 662 Td (TOTAL) Tj ET`);
+    streamCommands.push(`40 680 515 22 re f`);
+    streamCommands.push(`${borderColor} RG 1 w`);
+    streamCommands.push(`40 680 515 22 re S`);
 
-    // Line Items
-    let currentY = 635;
+    streamCommands.push(`0 0 0 rg`);
+    streamCommands.push(`BT /F2 7 Tf 45 687 Td (Sr.no) Tj ET`);
+    streamCommands.push(`BT /F2 7 Tf 75 687 Td (vechile no) Tj ET`);
+    streamCommands.push(`BT /F2 7 Tf 145 687 Td (length) Tj ET`);
+    streamCommands.push(`BT /F2 7 Tf 185 687 Td (width) Tj ET`);
+    streamCommands.push(`BT /F2 7 Tf 225 687 Td (peace) Tj ET`);
+    streamCommands.push(`BT /F2 7 Tf 265 687 Td (sq.ft) Tj ET`);
+    streamCommands.push(`BT /F2 7 Tf 315 687 Td (description) Tj ET`);
+    streamCommands.push(`BT /F2 7 Tf 425 687 Td (specific) Tj ET`);
+    streamCommands.push(`BT /F2 7 Tf 510 687 Td (Total) Tj ET`);
+
+    // Table Rows
+    let currentY = 660;
     const items = invoice.items || [];
 
     items.forEach((item, index) => {
       streamCommands.push(`0 0 0 rg`);
-      streamCommands.push(`BT /F1 8 Tf 45 ${currentY} Td (${index + 1}) Tj ET`);
-      
-      let itemTitle = item.item_name || item.itemName || 'Timber Item';
-      if (item.item_description || item.itemDescription) {
-        itemTitle += ` - ${item.item_description || item.itemDescription}`;
-      }
-      if (itemTitle.length > 35) itemTitle = itemTitle.slice(0, 33) + '..';
-      streamCommands.push(`BT /F1 8 Tf 65 ${currentY} Td (${this.escapePdfText(itemTitle)}) Tj ET`);
+      streamCommands.push(`BT /F1 7.5 Tf 47 ${currentY} Td (${index + 1}) Tj ET`);
 
-      const dims = (item.length || item.width || item.thickness)
-        ? `${item.length || 0}'x${item.width || 0}"x${item.thickness || 0}"`
-        : '-';
-      streamCommands.push(`BT /F1 8 Tf 270 ${currentY} Td (${this.escapePdfText(dims)}) Tj ET`);
+      const rowVeh = item.vehicle_no || item.vehicleNo || vehNo;
+      streamCommands.push(`BT /F1 7.5 Tf 75 ${currentY} Td (${this.escapePdfText(rowVeh.slice(0, 12))}) Tj ET`);
 
+      const len = item.length || '-';
+      const wid = item.width || '-';
       const pcs = item.pieces || (item.total_cft ? item.quantity : item.quantity) || 1;
-      streamCommands.push(`BT /F2 8 Tf 355 ${currentY} Td (${pcs}) Tj ET`);
+      streamCommands.push(`BT /F1 7.5 Tf 147 ${currentY} Td (${len}) Tj ET`);
+      streamCommands.push(`BT /F1 7.5 Tf 187 ${currentY} Td (${wid}) Tj ET`);
+      streamCommands.push(`BT /F2 7.5 Tf 227 ${currentY} Td (${pcs}) Tj ET`);
 
-      const cftVal = item.total_cft || item.totalCft || 0;
-      const cftText = cftVal > 0 ? `${Number(cftVal).toFixed(2)}` : '-';
-      streamCommands.push(`BT /F1 8 Tf 400 ${currentY} Td (${cftText}) Tj ET`);
+      // Calculation: length * width * peace / 144
+      const sqftVal = (item.length && item.width && pcs)
+        ? ((Number(item.length) * Number(item.width) * Number(pcs)) / 144)
+        : (Number(item.sqft || item.total_cft || item.totalCft || 0));
 
-      streamCommands.push(`BT /F1 8 Tf 450 ${currentY} Td (Rs.${Number(item.unit_price || item.unitPrice || 0).toFixed(0)}) Tj ET`);
-      streamCommands.push(`BT /F2 8 Tf 505 ${currentY} Td (Rs.${Number(item.total_price || item.totalPrice || 0).toFixed(0)}) Tj ET`);
+      streamCommands.push(`BT /F2 7.5 Tf 265 ${currentY} Td (${sqftVal > 0 ? sqftVal.toFixed(2) : '-'}) Tj ET`);
 
-      // Row separator
-      streamCommands.push(`${borderColor} RG 0.5 w`);
-      streamCommands.push(`40 ${currentY - 6} m 555 ${currentY - 6} l S`);
+      const desc = item.item_name || item.itemName || 'Timber Plank';
+      streamCommands.push(`BT /F1 7.5 Tf 315 ${currentY} Td (${this.escapePdfText(desc.slice(0, 22))}) Tj ET`);
 
-      currentY -= 20;
+      const spec = item.item_description || item.itemDescription || item.specific || '-';
+      streamCommands.push(`BT /F1 7.5 Tf 425 ${currentY} Td (${this.escapePdfText(spec.slice(0, 16))}) Tj ET`);
+
+      const rowTot = Number(item.total_price || item.totalPrice || 0);
+      streamCommands.push(`BT /F2 7.5 Tf 505 ${currentY} Td (Rs.${rowTot.toFixed(0)}) Tj ET`);
+
+      // Grid line
+      streamCommands.push(`0.7 0.7 0.7 RG 0.5 w`);
+      streamCommands.push(`40 ${currentY - 5} m 555 ${currentY - 5} l S`);
+
+      currentY -= 19;
     });
 
     // Summary Box
     const taxRate = Number(invoice.tax_rate ?? invoice.taxRate ?? 0);
     const boxHeight = taxRate > 0 ? 95 : 80;
-    const summaryY = Math.max(currentY - 15, 260);
+    const summaryY = Math.max(currentY - 15, 250);
 
     streamCommands.push(`${lightBg} rg`);
     streamCommands.push(`350 ${summaryY - boxHeight} 205 ${boxHeight} re f`);
@@ -146,20 +150,25 @@ class ClientMicroPdfGenerator {
     streamCommands.push(`BT /F1 8 Tf 360 ${summaryY - lineOffset} Td (Amount Paid:) Tj 480 ${summaryY - lineOffset} Td (Rs. ${amountPaid}) Tj ET`);
 
     lineOffset += 14;
-    streamCommands.push(`${primaryColor} rg`);
+    streamCommands.push(`0.8 0.1 0.1 rg`);
     streamCommands.push(`BT /F2 9 Tf 360 ${summaryY - lineOffset} Td (Balance Due:) Tj 475 ${summaryY - lineOffset} Td (Rs. ${balanceDue}) Tj ET`);
 
-    // Formula & Payment Instructions
+    // Bottom notes & Signature
     streamCommands.push(`${grayColor} rg`);
-    streamCommands.push(`BT /F1 8 Tf 40 120 Td (Calculation Formula: Length ft * Width in * Thick in * Peace / 144 = Total CFT) Tj ET`);
-    streamCommands.push(`BT /F2 8 Tf 40 106 Td (Payment Mode: ${this.escapePdfText(invoice.payment_method || invoice.paymentMethod || 'Bank Transfer / UPI')}) Tj ET`);
-    streamCommands.push(`BT /F1 8 Tf 40 92 Td (Micro-optimized vector document (~5 KB) - Electronically Verified) Tj ET`);
+    streamCommands.push(`BT /F1 8 Tf 40 130 Td (Calculation: length * width * peace / 144 = total sq.ft) Tj ET`);
+    streamCommands.push(`BT /F2 8 Tf 40 116 Td (Payment Mode: ${this.escapePdfText(invoice.payment_method || 'Bank Transfer')}) Tj ET`);
+    streamCommands.push(`BT /F1 8 Tf 40 102 Td (Micro-optimized vector document (~5 KB) - Electronically Verified) Tj ET`);
 
-    // Bottom Decorative Footer
-    streamCommands.push(`${primaryColor} rg`);
+    // Signatory
+    streamCommands.push(`0 0 0 rg`);
+    streamCommands.push(`BT /F2 8.5 Tf 430 80 Td (For ${this.escapePdfText(firmName)}) Tj ET`);
+    streamCommands.push(`BT /F1 8 Tf 430 65 Td (Authorized Signatory) Tj ET`);
+
+    // Bottom Decorative Bar
+    streamCommands.push(`${darkColor} rg`);
     streamCommands.push(`0 0 595 18 re f`);
     streamCommands.push(`1 1 1 rg`);
-    streamCommands.push(`BT /F1 8 Tf 160 6 Td (${this.escapePdfText(firmName)} - Commercial Packing List & Invoicing System) Tj ET`);
+    streamCommands.push(`BT /F1 8 Tf 160 6 Td (${this.escapePdfText(firmName)} - Commercial Invoicing System) Tj ET`);
 
     const contentStream = streamCommands.join('\n');
     return this.buildPdfBlob(contentStream);

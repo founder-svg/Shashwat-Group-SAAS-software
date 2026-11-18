@@ -35,28 +35,35 @@ export const billingService = {
       .select('*, invoice_items(*)')
       .order('invoice_date', { ascending: false });
 
-    // Map invoice_items to items for consistent frontend usage
-    if (data) {
-      data.forEach(inv => {
-        if (inv.invoice_items && !inv.items) {
-          inv.items = inv.invoice_items.map(it => ({
-            ...it,
-            itemName: it.item_name,
-            itemDescription: it.item_description || '',
-            vehicleNo: it.vehicle_no || inv.vehicle_no || '',
-            length: it.length || 0,
-            width: it.width || 0,
-            thickness: it.thickness || 0,
-            unitPrice: it.unit_price,
-            totalPrice: it.total_price,
-            pieces: it.pieces || it.quantity || 1,
-            totalCft: it.total_cft || 0
-          }));
-        }
-      });
-    }
+    // Filter out any stale mock records (such as Patel Enterprises) from Supabase
+    const cleanList = (data || []).filter(i => 
+      i && 
+      i.customer_name !== 'Patel Enterprises' && 
+      i.customer_name !== 'Patel Timber Mart' && 
+      i.invoice_number !== 'INV-2026-001' &&
+      !['inv-1', 'inv-demo', '10000000-0000-0000-0000-000000000001'].includes(i.id)
+    );
 
-    return { data, error };
+    // Map invoice_items to items for consistent frontend usage
+    cleanList.forEach(inv => {
+      if (inv.invoice_items && !inv.items) {
+        inv.items = inv.invoice_items.map(it => ({
+          ...it,
+          itemName: it.item_name,
+          itemDescription: it.item_description || '',
+          vehicleNo: it.vehicle_no || inv.vehicle_no || '',
+          length: it.length || 0,
+          width: it.width || 0,
+          thickness: it.thickness || 0,
+          unitPrice: it.unit_price,
+          totalPrice: it.total_price,
+          pieces: it.pieces || it.quantity || 1,
+          totalCft: it.total_cft || 0
+        }));
+      }
+    });
+
+    return { data: cleanList, error };
   },
 
   async createInvoice(invoiceInput) {

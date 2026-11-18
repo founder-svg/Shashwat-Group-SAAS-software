@@ -74,27 +74,8 @@ const mockData = {
       is_active: true
     }
   ],
-  leads: [
-    {
-      id: 'c0000000-0000-0000-0000-000000000001',
-      first_name: 'Vikram',
-      last_name: 'Patel',
-      email: 'vikram@patelenterprises.in',
-      phone: '+91-9988776655',
-      company: 'Patel Enterprises',
-      status: 'Qualified',
-      estimated_budget: 150000.00
-    }
-  ],
-  deals: [
-    {
-      id: 'd0000000-0000-0000-0000-000000000001',
-      title: 'Patel Enterprises SaaS Contract',
-      value: 150000.00,
-      currency: 'INR',
-      stage: 'Proposal Sent'
-    }
-  ]
+  leads: [],
+  deals: []
 };
 
 async function mockQuery(text, params) {

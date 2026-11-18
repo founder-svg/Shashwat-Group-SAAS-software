@@ -15,6 +15,8 @@ import AuthScreen from './components/AuthScreen';
 import InvoiceModal from './components/InvoiceModal';
 import StockMovementModal from './components/StockMovementModal';
 import PrintBillModal from './components/PrintBillModal';
+import WhatsAppModal from './components/WhatsAppModal';
+import { clientMicroPdf } from './utils/microPdfGenerator';
 
 import { supabase, isConfigured } from './config/supabaseClient';
 import { inventoryService } from './services/inventoryService';
@@ -23,7 +25,7 @@ import { driveService } from './services/driveService';
 import { vehicleService } from './services/vehicleService';
 
 // One-time auto purge of legacy demo cache keys across client browsers
-const SYSTEM_CACHE_VERSION = 'shashwat_v6_clean';
+const SYSTEM_CACHE_VERSION = 'shashwat_v8_purge_patel';
 if (typeof window !== 'undefined' && localStorage.getItem('shashwat_system_version') !== SYSTEM_CACHE_VERSION) {
   localStorage.removeItem('shashwat_invoices_cache');
   localStorage.removeItem('shashwat_inventory_cache');
@@ -70,6 +72,7 @@ export default function App() {
   const [stockModalType, setStockModalType] = useState('STOCK_IN');
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [selectedInvoiceForPrint, setSelectedInvoiceForPrint] = useState(null);
+  const [whatsAppModalInvoice, setWhatsAppModalInvoice] = useState(null);
 
   // Initial load when user and firm are active
   useEffect(() => {
@@ -153,12 +156,33 @@ export default function App() {
   };
 
   // Actions for Invoices
-  const handleCreateInvoice = async (invoiceData) => {
+  const handleCreateInvoice = async (invoiceData, sendToWhatsApp = false) => {
     const res = await billingService.createInvoice(invoiceData);
     if (res.data) {
       loadAllData();
-      setSelectedInvoiceForPrint(res.data);
-      setIsPrintModalOpen(true);
+      if (sendToWhatsApp) {
+        // Automatically download the vector PDF file (< 8 KB)
+        clientMicroPdf.downloadInvoicePdf(res.data);
+
+        // Format WhatsApp phone number (auto-prepend 91 if 10 digits)
+        let cleanPhone = (invoiceData.whatsappNo || invoiceData.customerPhone || '').replace(/\D/g, '');
+        if (cleanPhone.length === 10) cleanPhone = '91' + cleanPhone;
+
+        const custName = res.data.customer_name || 'Valued Client';
+        const invNo = res.data.invoice_number;
+        const total = Number(res.data.total_amount).toFixed(2);
+        const msgText = `📄 *TAX INVOICE & PACKING LIST: ${invNo}*\n🏢 *${selectedFirm?.name || 'Shashwat Group'}*\n━━━━━━━━━━━━━━━━━━━━\n👤 *Customer:* ${custName}\n📅 *Date:* ${res.data.invoice_date}\n💰 *Total Amount:* ₹${total}\n\n📎 *Official Vector PDF file attached & downloaded.*\n_For any queries or dispatches, please contact ${selectedFirm?.name || 'Shashwat Group'}._`;
+
+        const waUrl = cleanPhone 
+          ? `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(msgText)}`
+          : `https://api.whatsapp.com/send?text=${encodeURIComponent(msgText)}`;
+
+        window.open(waUrl, '_blank');
+        setWhatsAppModalInvoice(res.data);
+      } else {
+        setSelectedInvoiceForPrint(res.data);
+        setIsPrintModalOpen(true);
+      }
     } else if (res.error) {
       alert(`Error creating invoice: ${res.error.message}`);
     }
@@ -489,6 +513,16 @@ export default function App() {
           setIsInvoiceModalOpen(true);
         }}
       />
+
+      {/* Direct WhatsApp PDF Dispatch Modal */}
+      {whatsAppModalInvoice && (
+        <WhatsAppModal
+          isOpen={Boolean(whatsAppModalInvoice)}
+          onClose={() => setWhatsAppModalInvoice(null)}
+          invoice={whatsAppModalInvoice}
+          firm={selectedFirm}
+        />
+      )}
     </div>
   );
 }

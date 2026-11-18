@@ -39,6 +39,10 @@ export default function Billing({
   const [payMethod, setPayMethod] = useState('Bank Transfer');
 
   const filteredInvoices = invoices.filter((inv) => {
+    // Strictly exclude any legacy mock demo data (e.g. Patel Enterprises)
+    if (inv.customer_name === 'Patel Enterprises' || inv.customer_name === 'Patel Timber Mart' || inv.invoice_number === 'INV-2026-001' || inv.id === 'inv-1') {
+      return false;
+    }
     const matchesSearch = 
       inv.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       inv.invoice_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||

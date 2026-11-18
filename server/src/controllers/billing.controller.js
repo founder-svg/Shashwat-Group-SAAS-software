@@ -2,31 +2,7 @@ const { initDatabase } = require('../../../database/connection');
 const driveManager = require('../../../cloud/drive/driveManager');
 const db = initDatabase();
 
-const mockInvoices = [
-  {
-    id: '10000000-0000-0000-0000-000000000001',
-    invoice_number: 'INV-2026-001',
-    customer_name: 'Patel Enterprises',
-    customer_email: 'vikram@patelenterprises.in',
-    customer_phone: '+91-9988776655',
-    invoice_date: new Date().toISOString().split('T')[0],
-    subtotal: 97500.00,
-    tax_rate: 18.00,
-    tax_amount: 17550.00,
-    total_amount: 115050.00,
-    amount_paid: 50000.00,
-    balance_due: 65050.00,
-    status: 'PARTIALLY_PAID',
-    items: [
-      {
-        item_name: 'Custom Industrial Control Panel 100A',
-        quantity: 5,
-        unit_price: 19500.00,
-        total_price: 97500.00
-      }
-    ]
-  }
-];
+const mockInvoices = [];
 
 async function getInvoices(req, res, next) {
   try {

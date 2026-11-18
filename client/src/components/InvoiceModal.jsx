@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Plus, Trash2, Receipt, ShieldCheck, Calculator, Ruler, Layers } from 'lucide-react';
+import { X, Plus, Trash2, Receipt, ShieldCheck, Calculator, Ruler, Layers, Send } from 'lucide-react';
 import { isPlywoodItem } from '../utils/woodCalculator';
 
 export default function InvoiceModal({ 
@@ -16,6 +16,7 @@ export default function InvoiceModal({
 
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
+  const [whatsappNo, setWhatsappNo] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
   const [customerAddress, setCustomerAddress] = useState('');
   const [vehicleNo, setVehicleNo] = useState('');
@@ -51,7 +52,9 @@ export default function InvoiceModal({
   useEffect(() => {
     if (invoiceToEdit) {
       setCustomerName(invoiceToEdit.customer_name || invoiceToEdit.customerName || '');
-      setCustomerPhone(invoiceToEdit.customer_phone || invoiceToEdit.customerPhone || '');
+      const phoneVal = invoiceToEdit.customer_phone || invoiceToEdit.customerPhone || '';
+      setCustomerPhone(phoneVal);
+      setWhatsappNo(invoiceToEdit.whatsapp_no || invoiceToEdit.whatsappNo || phoneVal);
       setCustomerEmail(invoiceToEdit.customer_email || invoiceToEdit.customerEmail || '');
       setCustomerAddress(invoiceToEdit.customer_address || invoiceToEdit.customerAddress || '');
       setVehicleNo(invoiceToEdit.vehicle_no || invoiceToEdit.vehicleNo || '');
@@ -89,6 +92,7 @@ export default function InvoiceModal({
       // Reset form for fresh invoice
       setCustomerName('');
       setCustomerPhone('');
+      setWhatsappNo('');
       setCustomerEmail('');
       setCustomerAddress('');
       setVehicleNo('');
@@ -126,6 +130,14 @@ export default function InvoiceModal({
     if (l <= 0 || w <= 0) return 0;
     return (l * w * p) / 144;
   }
+
+  const handlePhoneChange = (e) => {
+    const val = e.target.value;
+    setCustomerPhone(val);
+    if (!whatsappNo || whatsappNo === customerPhone) {
+      setWhatsappNo(val);
+    }
+  };
 
   const handleItemChange = (index, field, value) => {
     const updated = [...items];
@@ -195,10 +207,13 @@ export default function InvoiceModal({
   const totalPiecesSum = items.reduce((acc, it) => acc + (Number(it.pieces) || 0), 0);
   const totalSqFtSum = items.reduce((acc, it) => acc + (Number(it.sqft) || 0), 0);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  const processFormSubmit = (sendToWhatsApp = false) => {
     if (!customerName.trim()) {
       alert('Please enter customer / client name');
+      return;
+    }
+    if (sendToWhatsApp && !whatsappNo.trim() && !customerPhone.trim()) {
+      alert('Please enter WhatsApp phone number to send the PDF bill');
       return;
     }
     if (items.some(it => !it.itemName.trim() || Number(it.pieces) <= 0)) {
@@ -225,6 +240,7 @@ export default function InvoiceModal({
     const invoicePayload = {
       customerName: customerName.trim(),
       customerPhone: customerPhone.trim(),
+      whatsappNo: (whatsappNo || customerPhone || '').trim(),
       customerEmail: customerEmail.trim(),
       customerAddress: customerAddress.trim(),
       vehicleNo: vehicleNo.trim(),
@@ -248,6 +264,7 @@ export default function InvoiceModal({
       onUpdated(invoiceToEdit.id, {
         customer_name: invoicePayload.customerName,
         customer_phone: invoicePayload.customerPhone,
+        whatsapp_no: invoicePayload.whatsappNo,
         customer_email: invoicePayload.customerEmail,
         customer_address: invoicePayload.customerAddress,
         vehicle_no: invoicePayload.vehicleNo,
@@ -264,10 +281,15 @@ export default function InvoiceModal({
         items: invoicePayload.items
       });
     } else if (onCreated) {
-      onCreated(invoicePayload);
+      onCreated(invoicePayload, sendToWhatsApp);
     }
 
     onClose();
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    processFormSubmit(false);
   };
 
   return (
@@ -284,7 +306,7 @@ export default function InvoiceModal({
                 {invoiceToEdit ? 'Edit Customer Invoice / Bill' : 'Generate Customer Bill'}
               </h2>
               <p className="text-[11px] text-slate-400 font-mono">
-                Calculation: length × width × peace / 144 = total sq.ft
+                Calculation: length × width × peace / 144 = total sq.ft • Direct WhatsApp PDF Dispatch
               </p>
             </div>
           </div>
@@ -294,9 +316,9 @@ export default function InvoiceModal({
         </div>
 
         <form onSubmit={handleSubmit} className="p-5 sm:p-6 space-y-4 max-h-[85vh] overflow-y-auto">
-          {/* Customer Details Box per user's 1st image */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
+          {/* Customer Details Box per user's request: Includes WhatsApp No Form */}
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+            <div className="sm:col-span-2">
               <label className="block text-xs font-bold text-slate-700 mb-1">Customer / Client Name *</label>
               <input
                 type="text"
@@ -312,19 +334,25 @@ export default function InvoiceModal({
               <input
                 type="text"
                 value={customerPhone}
-                onChange={(e) => setCustomerPhone(e.target.value)}
+                onChange={handlePhoneChange}
                 placeholder="+91-9876543210"
                 className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none"
               />
             </div>
+            {/* WhatsApp No Field: Explicitly requested by user */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Email / Gmail</label>
+              <label className="block text-xs font-bold text-emerald-800 mb-1 flex items-center gap-1">
+                <svg className="w-3.5 h-3.5 fill-emerald-600 shrink-0" viewBox="0 0 24 24">
+                  <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.275.072.376-.044c.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.043.073.043.419-.101.824z"/>
+                </svg>
+                <span>WhatsApp No (for PDF)</span>
+              </label>
               <input
-                type="email"
-                value={customerEmail}
-                onChange={(e) => setCustomerEmail(e.target.value)}
-                placeholder="client@gmail.com"
-                className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                type="text"
+                value={whatsappNo}
+                onChange={(e) => setWhatsappNo(e.target.value)}
+                placeholder="+91-9876543210"
+                className="w-full text-xs px-3 py-2 border-2 border-emerald-400 bg-emerald-50/50 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none font-bold text-slate-900"
               />
             </div>
           </div>
@@ -551,7 +579,7 @@ export default function InvoiceModal({
             </div>
           </div>
 
-          {/* Conditional GST Section (User requested: remove static GST, option Yes/No, if Yes enter % else no field) */}
+          {/* Conditional GST Section */}
           <div className="flex flex-col sm:flex-row justify-between items-start gap-4 pt-2">
             <div className="w-full sm:w-1/2 space-y-3">
               <div className="bg-slate-100/80 p-3 rounded-xl border border-slate-200 space-y-2">
@@ -581,7 +609,6 @@ export default function InvoiceModal({
                   </div>
                 </div>
 
-                {/* If Yes: field appears to enter percentage */}
                 {applyGst && (
                   <div className="pt-2 border-t border-slate-200 flex items-center justify-between">
                     <label className="text-xs font-semibold text-slate-700">Enter GST Percentage (%)</label>
@@ -643,7 +670,6 @@ export default function InvoiceModal({
                 <span className="font-bold text-slate-900">₹{subtotal.toFixed(2)}</span>
               </div>
 
-              {/* Only shown if GST is applied and > 0 */}
               {applyGst && activeTaxRate > 0 && (
                 <>
                   <div className="flex justify-between items-center text-slate-600">
@@ -669,21 +695,37 @@ export default function InvoiceModal({
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex justify-end space-x-2 pt-4 border-t border-slate-200">
+          {/* Action Buttons: Includes Direct WhatsApp PDF Send */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-slate-200">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800"
+              className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 order-2 sm:order-1"
             >
               Cancel
             </button>
-            <button
-              type="submit"
-              className="px-5 py-2.5 text-xs font-bold text-slate-950 bg-gradient-to-r from-amber-400 to-orange-400 hover:from-amber-300 hover:to-orange-300 rounded-xl shadow-md transition"
-            >
-              {invoiceToEdit ? 'Save Changes & Update Bill' : 'Issue Bill & Generate Micro-PDF'}
-            </button>
+
+            <div className="flex items-center gap-2 w-full sm:w-auto order-1 sm:order-2 justify-end">
+              {/* Direct WhatsApp PDF Send Button */}
+              <button
+                type="button"
+                onClick={() => processFormSubmit(true)}
+                className="flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 rounded-xl shadow-md transition"
+                title="Save bill, download vector PDF, and immediately redirect to WhatsApp"
+              >
+                <svg className="w-4 h-4 fill-white" viewBox="0 0 24 24">
+                  <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.275.072.376-.044c.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.043.073.043.419-.101.824z"/>
+                </svg>
+                <span>Issue &amp; Send to WhatsApp (PDF)</span>
+              </button>
+
+              <button
+                type="submit"
+                className="px-5 py-2.5 text-xs font-bold text-slate-950 bg-gradient-to-r from-amber-400 to-orange-400 hover:from-amber-300 hover:to-orange-300 rounded-xl shadow-md transition"
+              >
+                {invoiceToEdit ? 'Save Changes' : 'Issue Bill'}
+              </button>
+            </div>
           </div>
         </form>
       </div>

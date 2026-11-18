@@ -2,10 +2,10 @@
  * Client-Side Ultra-Lightweight Vector PDF Generator for Shashwat Group CRM
  * 
  * DESIGN PRINCIPLE:
- *  - Runs 100% in the browser with ZERO external heavy libraries (no Puppeteer, no heavy canvas).
+ *  - Runs 100% in the browser with ZERO external heavy libraries.
  *  - Generates true standard PDF 1.4 binary documents using PostScript core fonts (Helvetica).
  *  - File size: 4 KB to 8 KB per invoice (Over 99% smaller than standard 3MB-5MB PDFs).
- *  - One-click instant direct file download on mobile and desktop.
+ *  - Fast direct file download and WhatsApp PDF attachment.
  */
 
 class ClientMicroPdfGenerator {
@@ -31,44 +31,50 @@ class ClientMicroPdfGenerator {
 
     // Top Header Banner
     streamCommands.push(`${primaryColor} rg`);
-    streamCommands.push(`0 770 595 72 re f`);
+    streamCommands.push(`0 760 595 82 re f`);
 
     // Header Text (White)
+    const firmName = invoice.firm_name || (invoice.customer_name?.includes('Plywood') ? 'SHASHWAT ASHAPURA WOODS' : 'SHASHWAT GROUP');
     streamCommands.push(`1 1 1 rg`);
-    streamCommands.push(`BT /F2 20 Tf 40 805 Td (SHASHWAT GROUP) Tj ET`);
-    streamCommands.push(`BT /F1 10 Tf 40 788 Td (Commercial SaaS Solutions | Billing & CRM Department) Tj ET`);
-    streamCommands.push(`BT /F2 18 Tf 460 805 Td (TAX INVOICE) Tj ET`);
+    streamCommands.push(`BT /F2 18 Tf 40 812 Td (${this.escapePdfText(firmName)}) Tj ET`);
+    streamCommands.push(`BT /F1 8 Tf 40 798 Td (PLOT NO-163-164, SHOP 1-3, SN-138 NR. VENUS SOCIETY, GANDHIDHAM KUTCH GUJARAT-370205) Tj ET`);
+    streamCommands.push(`BT /F1 8 Tf 40 786 Td (Mo: +91 91379 21191, +91 99982 55525) Tj ET`);
+    streamCommands.push(`BT /F2 15 Tf 410 812 Td (TAX INVOICE) Tj ET`);
+    streamCommands.push(`BT /F1 8 Tf 410 798 Td (& PACKING LIST) Tj ET`);
 
-    // Client Details (Left Column)
+    // Client / Consignee Details (Left Column)
     streamCommands.push(`0 0 0 rg`);
-    streamCommands.push(`BT /F2 10 Tf 40 735 Td (BILLED TO:) Tj ET`);
+    streamCommands.push(`BT /F2 10 Tf 40 735 Td (CONSIGNEE / BILLED TO:) Tj ET`);
     streamCommands.push(`BT /F2 12 Tf 40 718 Td (${this.escapePdfText(invoice.customer_name || invoice.customerName)}) Tj ET`);
 
     const clientPhone = invoice.customer_phone || invoice.customerPhone || 'N/A';
-    const clientEmail = invoice.customer_email || invoice.customerEmail || 'N/A';
+    const clientAddress = invoice.customer_address || invoice.customerAddress || 'N/A';
     streamCommands.push(`${grayColor} rg`);
-    streamCommands.push(`BT /F1 9 Tf 40 702 Td (Phone: ${this.escapePdfText(clientPhone)}  |  Email: ${this.escapePdfText(clientEmail)}) Tj ET`);
+    streamCommands.push(`BT /F1 9 Tf 40 702 Td (Phone: ${this.escapePdfText(clientPhone)}  |  Site: ${this.escapePdfText(clientAddress.slice(0, 35))}) Tj ET`);
 
-    // Invoice Meta (Right Column)
+    // Invoice Meta & Vehicle Details (Right Column)
+    const vehNo = invoice.vehicle_no || invoice.vehicleNo || 'GJ-18-BW-7236';
+    const transport = invoice.transport || 'ARRANGE';
     streamCommands.push(`0 0 0 rg`);
-    streamCommands.push(`BT /F2 10 Tf 380 735 Td (Invoice No: ${this.escapePdfText(invoice.invoice_number || invoice.invoiceNumber)}) Tj ET`);
-    streamCommands.push(`BT /F1 9 Tf 380 718 Td (Date: ${this.escapePdfText(invoice.invoice_date || invoice.invoiceDate)}) Tj ET`);
-    streamCommands.push(`BT /F1 9 Tf 380 702 Td (Status: ${this.escapePdfText(invoice.status || 'ISSUED')}) Tj ET`);
+    streamCommands.push(`BT /F2 10 Tf 370 735 Td (Invoice No: ${this.escapePdfText(invoice.invoice_number || invoice.invoiceNumber)}) Tj ET`);
+    streamCommands.push(`BT /F1 9 Tf 370 718 Td (Date: ${this.escapePdfText(invoice.invoice_date || invoice.invoiceDate)}  |  Status: ${this.escapePdfText(invoice.status || 'ISSUED')}) Tj ET`);
+    streamCommands.push(`BT /F2 9 Tf 370 702 Td (Vehicle No: ${this.escapePdfText(vehNo)}  |  Transport: ${this.escapePdfText(transport)}) Tj ET`);
 
     // Divider Line
     streamCommands.push(`${borderColor} RG 1 w`);
     streamCommands.push(`40 685 m 555 685 l S`);
 
-    // Table Header Box
+    // Table Header Box (Packing list columns)
     streamCommands.push(`${lightBg} rg`);
     streamCommands.push(`40 655 515 22 re f`);
     streamCommands.push(`${primaryColor} rg`);
-    streamCommands.push(`BT /F2 8 Tf 48 662 Td (#) Tj ET`);
-    streamCommands.push(`BT /F2 8 Tf 70 662 Td (ITEM DESCRIPTION & SPECS) Tj ET`);
-    streamCommands.push(`BT /F2 8 Tf 315 662 Td (PCS) Tj ET`);
-    streamCommands.push(`BT /F2 8 Tf 365 662 Td (CFT) Tj ET`);
-    streamCommands.push(`BT /F2 8 Tf 425 662 Td (RATE) Tj ET`);
-    streamCommands.push(`BT /F2 8 Tf 495 662 Td (AMOUNT) Tj ET`);
+    streamCommands.push(`BT /F2 8 Tf 45 662 Td (#) Tj ET`);
+    streamCommands.push(`BT /F2 8 Tf 65 662 Td (ITEM DESCRIPTION & SPECS) Tj ET`);
+    streamCommands.push(`BT /F2 8 Tf 270 662 Td (DIMS (LxWxT)) Tj ET`);
+    streamCommands.push(`BT /F2 8 Tf 350 662 Td (PEACE) Tj ET`);
+    streamCommands.push(`BT /F2 8 Tf 400 662 Td (CFT) Tj ET`);
+    streamCommands.push(`BT /F2 8 Tf 450 662 Td (RATE) Tj ET`);
+    streamCommands.push(`BT /F2 8 Tf 505 662 Td (TOTAL) Tj ET`);
 
     // Line Items
     let currentY = 635;
@@ -76,22 +82,29 @@ class ClientMicroPdfGenerator {
 
     items.forEach((item, index) => {
       streamCommands.push(`0 0 0 rg`);
-      streamCommands.push(`BT /F1 8 Tf 48 ${currentY} Td (${index + 1}) Tj ET`);
+      streamCommands.push(`BT /F1 8 Tf 45 ${currentY} Td (${index + 1}) Tj ET`);
       
       let itemTitle = item.item_name || item.itemName || 'Timber Item';
       if (item.item_description || item.itemDescription) {
         itemTitle += ` - ${item.item_description || item.itemDescription}`;
       }
-      if (itemTitle.length > 42) itemTitle = itemTitle.slice(0, 40) + '..';
+      if (itemTitle.length > 35) itemTitle = itemTitle.slice(0, 33) + '..';
+      streamCommands.push(`BT /F1 8 Tf 65 ${currentY} Td (${this.escapePdfText(itemTitle)}) Tj ET`);
 
-      streamCommands.push(`BT /F1 8 Tf 70 ${currentY} Td (${this.escapePdfText(itemTitle)}) Tj ET`);
+      const dims = (item.length || item.width || item.thickness)
+        ? `${item.length || 0}'x${item.width || 0}"x${item.thickness || 0}"`
+        : '-';
+      streamCommands.push(`BT /F1 8 Tf 270 ${currentY} Td (${this.escapePdfText(dims)}) Tj ET`);
+
       const pcs = item.pieces || (item.total_cft ? item.quantity : item.quantity) || 1;
-      streamCommands.push(`BT /F1 8 Tf 320 ${currentY} Td (${pcs}) Tj ET`);
+      streamCommands.push(`BT /F2 8 Tf 355 ${currentY} Td (${pcs}) Tj ET`);
+
       const cftVal = item.total_cft || item.totalCft || 0;
       const cftText = cftVal > 0 ? `${Number(cftVal).toFixed(2)}` : '-';
-      streamCommands.push(`BT /F1 8 Tf 365 ${currentY} Td (${cftText}) Tj ET`);
-      streamCommands.push(`BT /F1 8 Tf 425 ${currentY} Td (Rs. ${Number(item.unit_price || item.unitPrice || 0).toFixed(2)}) Tj ET`);
-      streamCommands.push(`BT /F2 8 Tf 495 ${currentY} Td (Rs. ${Number(item.total_price || item.totalPrice || 0).toFixed(2)}) Tj ET`);
+      streamCommands.push(`BT /F1 8 Tf 400 ${currentY} Td (${cftText}) Tj ET`);
+
+      streamCommands.push(`BT /F1 8 Tf 450 ${currentY} Td (Rs.${Number(item.unit_price || item.unitPrice || 0).toFixed(0)}) Tj ET`);
+      streamCommands.push(`BT /F2 8 Tf 505 ${currentY} Td (Rs.${Number(item.total_price || item.totalPrice || 0).toFixed(0)}) Tj ET`);
 
       // Row separator
       streamCommands.push(`${borderColor} RG 0.5 w`);
@@ -101,38 +114,52 @@ class ClientMicroPdfGenerator {
     });
 
     // Summary Box
+    const taxRate = Number(invoice.tax_rate ?? invoice.taxRate ?? 0);
+    const boxHeight = taxRate > 0 ? 95 : 80;
     const summaryY = Math.max(currentY - 15, 260);
+
     streamCommands.push(`${lightBg} rg`);
-    streamCommands.push(`350 ${summaryY - 80} 205 90 re f`);
+    streamCommands.push(`350 ${summaryY - boxHeight} 205 ${boxHeight} re f`);
     streamCommands.push(`${borderColor} RG 1 w`);
-    streamCommands.push(`350 ${summaryY - 80} 205 90 re S`);
+    streamCommands.push(`350 ${summaryY - boxHeight} 205 ${boxHeight} re S`);
 
     const subtotal = Number(invoice.subtotal || 0).toFixed(2);
-    const taxRate = Number(invoice.tax_rate || invoice.taxRate || 18);
     const taxAmount = Number(invoice.tax_amount || invoice.taxAmount || 0).toFixed(2);
     const grandTotal = Number(invoice.total_amount || invoice.totalAmount || 0).toFixed(2);
     const amountPaid = Number(invoice.amount_paid || invoice.amountPaid || 0).toFixed(2);
     const balanceDue = Number(invoice.balance_due || (grandTotal - amountPaid)).toFixed(2);
 
+    let lineOffset = 12;
     streamCommands.push(`0 0 0 rg`);
-    streamCommands.push(`BT /F1 9 Tf 360 ${summaryY - 10} Td (Subtotal:) Tj 500 ${summaryY - 10} Td (Rs. ${subtotal}) Tj ET`);
-    streamCommands.push(`BT /F1 9 Tf 360 ${summaryY - 26} Td (GST / Tax (${taxRate}%):) Tj 500 ${summaryY - 26} Td (Rs. ${taxAmount}) Tj ET`);
-    streamCommands.push(`BT /F2 11 Tf 360 ${summaryY - 45} Td (Grand Total:) Tj 480 ${summaryY - 45} Td (Rs. ${grandTotal}) Tj ET`);
-    streamCommands.push(`BT /F1 9 Tf 360 ${summaryY - 62} Td (Amount Paid:) Tj 500 ${summaryY - 62} Td (Rs. ${amountPaid}) Tj ET`);
-    streamCommands.push(`${primaryColor} rg`);
-    streamCommands.push(`BT /F2 10 Tf 360 ${summaryY - 76} Td (Balance Due:) Tj 485 ${summaryY - 76} Td (Rs. ${balanceDue}) Tj ET`);
+    streamCommands.push(`BT /F1 9 Tf 360 ${summaryY - lineOffset} Td (Subtotal:) Tj 480 ${summaryY - lineOffset} Td (Rs. ${subtotal}) Tj ET`);
 
-    // Payment Instructions & Footer
+    // Conditional GST row: Only included when taxRate > 0
+    if (taxRate > 0) {
+      lineOffset += 16;
+      streamCommands.push(`BT /F1 9 Tf 360 ${summaryY - lineOffset} Td (GST (${taxRate}%):) Tj 480 ${summaryY - lineOffset} Td (Rs. ${taxAmount}) Tj ET`);
+    }
+
+    lineOffset += 18;
+    streamCommands.push(`BT /F2 11 Tf 360 ${summaryY - lineOffset} Td (Grand Total:) Tj 470 ${summaryY - lineOffset} Td (Rs. ${grandTotal}) Tj ET`);
+
+    lineOffset += 16;
+    streamCommands.push(`BT /F1 8 Tf 360 ${summaryY - lineOffset} Td (Amount Paid:) Tj 480 ${summaryY - lineOffset} Td (Rs. ${amountPaid}) Tj ET`);
+
+    lineOffset += 14;
+    streamCommands.push(`${primaryColor} rg`);
+    streamCommands.push(`BT /F2 9 Tf 360 ${summaryY - lineOffset} Td (Balance Due:) Tj 475 ${summaryY - lineOffset} Td (Rs. ${balanceDue}) Tj ET`);
+
+    // Formula & Payment Instructions
     streamCommands.push(`${grayColor} rg`);
-    streamCommands.push(`BT /F2 9 Tf 40 120 Td (Payment Mode: ${this.escapePdfText(invoice.payment_method || invoice.paymentMethod || 'Bank Transfer / UPI')}) Tj ET`);
-    streamCommands.push(`BT /F1 8 Tf 40 105 Td (Notes: ${this.escapePdfText(invoice.notes || 'Thank you for choosing Shashwat Group.')}) Tj ET`);
-    streamCommands.push(`BT /F1 8 Tf 40 90 Td (Micro-optimized vector document (~5 KB) synced with Google Drive.) Tj ET`);
+    streamCommands.push(`BT /F1 8 Tf 40 120 Td (Calculation Formula: Length ft * Width in * Thick in * Peace / 144 = Total CFT) Tj ET`);
+    streamCommands.push(`BT /F2 8 Tf 40 106 Td (Payment Mode: ${this.escapePdfText(invoice.payment_method || invoice.paymentMethod || 'Bank Transfer / UPI')}) Tj ET`);
+    streamCommands.push(`BT /F1 8 Tf 40 92 Td (Micro-optimized vector document (~5 KB) - Electronically Verified) Tj ET`);
 
     // Bottom Decorative Footer
     streamCommands.push(`${primaryColor} rg`);
     streamCommands.push(`0 0 595 18 re f`);
     streamCommands.push(`1 1 1 rg`);
-    streamCommands.push(`BT /F1 8 Tf 180 6 Td (Shashwat Group - Automated SaaS & Inventory Management System) Tj ET`);
+    streamCommands.push(`BT /F1 8 Tf 160 6 Td (${this.escapePdfText(firmName)} - Commercial Packing List & Invoicing System) Tj ET`);
 
     const contentStream = streamCommands.join('\n');
     return this.buildPdfBlob(contentStream);

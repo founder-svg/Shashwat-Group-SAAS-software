@@ -114,6 +114,9 @@ CREATE TABLE IF NOT EXISTS invoice_items (
 );
 
 -- Quick Alter for existing databases
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS vehicle_no VARCHAR(100);
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS transport VARCHAR(100);
+ALTER TABLE invoice_items ADD COLUMN IF NOT EXISTS vehicle_no VARCHAR(100);
 ALTER TABLE invoice_items ADD COLUMN IF NOT EXISTS item_description TEXT;
 ALTER TABLE invoice_items ADD COLUMN IF NOT EXISTS length NUMERIC(10, 2) DEFAULT 0.00;
 ALTER TABLE invoice_items ADD COLUMN IF NOT EXISTS width NUMERIC(10, 2) DEFAULT 0.00;

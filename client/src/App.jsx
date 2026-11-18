@@ -22,6 +22,17 @@ import { billingService } from './services/billingService';
 import { driveService } from './services/driveService';
 import { vehicleService } from './services/vehicleService';
 
+// One-time auto purge of legacy demo cache keys across client browsers
+const SYSTEM_CACHE_VERSION = 'shashwat_v6_clean';
+if (typeof window !== 'undefined' && localStorage.getItem('shashwat_system_version') !== SYSTEM_CACHE_VERSION) {
+  localStorage.removeItem('shashwat_invoices_cache');
+  localStorage.removeItem('shashwat_inventory_cache');
+  localStorage.removeItem('shashwat_transactions_cache');
+  localStorage.removeItem('shashwat_drive_cache');
+  localStorage.removeItem('shashwat_vehicles_cache');
+  localStorage.setItem('shashwat_system_version', SYSTEM_CACHE_VERSION);
+}
+
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   
@@ -54,6 +65,7 @@ export default function App() {
 
   // Modal states
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
+  const [invoiceToEdit, setInvoiceToEdit] = useState(null);
   const [isStockModalOpen, setIsStockModalOpen] = useState(false);
   const [stockModalType, setStockModalType] = useState('STOCK_IN');
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
@@ -399,7 +411,11 @@ export default function App() {
                 <Billing
                   invoices={invoices}
                   firm={selectedFirm}
-                  onOpenCreate={() => setIsInvoiceModalOpen(true)}
+                  inventory={inventory}
+                  onOpenCreate={() => {
+                    setInvoiceToEdit(null);
+                    setIsInvoiceModalOpen(true);
+                  }}
                   onPrint={openPrintModal}
                   onRecordPayment={handleRecordPayment}
                   onUpdateInvoice={handleUpdateInvoice}
@@ -443,8 +459,13 @@ export default function App() {
       {/* Global Modals */}
       <InvoiceModal
         isOpen={isInvoiceModalOpen}
-        onClose={() => setIsInvoiceModalOpen(false)}
+        onClose={() => {
+          setIsInvoiceModalOpen(false);
+          setInvoiceToEdit(null);
+        }}
         onCreated={handleCreateInvoice}
+        onUpdated={handleUpdateInvoice}
+        invoiceToEdit={invoiceToEdit}
         inventoryItems={inventory}
         firm={selectedFirm}
       />
@@ -462,6 +483,11 @@ export default function App() {
         onClose={() => setIsPrintModalOpen(false)}
         invoice={selectedInvoiceForPrint}
         firm={selectedFirm}
+        onEdit={(inv) => {
+          setIsPrintModalOpen(false);
+          setInvoiceToEdit(inv);
+          setIsInvoiceModalOpen(true);
+        }}
       />
     </div>
   );

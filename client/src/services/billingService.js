@@ -8,7 +8,14 @@ function getCachedInvoices() {
   if (cached) {
     try { 
       const parsed = JSON.parse(cached);
-      return parsed.filter(i => !['inv-1'].includes(i.id));
+      // Clean filter to ensure zero stale mock/demo data like Patel Enterprises
+      return parsed.filter(i => 
+        i && 
+        i.customer_name !== 'Patel Enterprises' && 
+        i.customer_name !== 'Patel Timber Mart' && 
+        i.invoice_number !== 'INV-2026-001' &&
+        !['inv-1', 'inv-demo'].includes(i.id)
+      );
     } catch (e) {}
   }
   return [];
@@ -36,6 +43,10 @@ export const billingService = {
             ...it,
             itemName: it.item_name,
             itemDescription: it.item_description || '',
+            vehicleNo: it.vehicle_no || inv.vehicle_no || '',
+            length: it.length || 0,
+            width: it.width || 0,
+            thickness: it.thickness || 0,
             unitPrice: it.unit_price,
             totalPrice: it.total_price,
             pieces: it.pieces || it.quantity || 1,
@@ -54,10 +65,12 @@ export const billingService = {
       customerEmail,
       customerPhone,
       customerAddress,
+      vehicleNo = '',
+      transport = 'ARRANGE',
       invoiceDate,
       dueDate,
       items,
-      taxRate = 18,
+      taxRate = 0,
       discountAmount = 0,
       paymentMethod = 'Bank Transfer',
       notes,
@@ -81,6 +94,7 @@ export const billingService = {
         item_id: it.itemId || null,
         item_name: it.itemName,
         item_description: it.itemDescription || '',
+        vehicle_no: it.vehicleNo || vehicleNo || '',
         length: parseFloat(it.length) || 0,
         width: parseFloat(it.width) || 0,
         thickness: parseFloat(it.thickness) || 0,
@@ -93,7 +107,8 @@ export const billingService = {
       };
     });
 
-    const taxAmount = (subtotal * (parseFloat(taxRate) || 0)) / 100;
+    const activeTaxRate = parseFloat(taxRate) || 0;
+    const taxAmount = (subtotal * activeTaxRate) / 100;
     const totalAmount = subtotal + taxAmount - (parseFloat(discountAmount) || 0);
     const invoiceNumber = `INV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
 
@@ -106,10 +121,12 @@ export const billingService = {
         customer_email: customerEmail || '',
         customer_phone: customerPhone || '',
         customer_address: customerAddress || '',
+        vehicle_no: vehicleNo || '',
+        transport: transport || 'ARRANGE',
         invoice_date: invoiceDate || new Date().toISOString().split('T')[0],
         due_date: dueDate || '',
         subtotal,
-        tax_rate: taxRate,
+        tax_rate: activeTaxRate,
         tax_amount: taxAmount,
         discount_amount: discountAmount,
         total_amount: totalAmount,
@@ -118,8 +135,7 @@ export const billingService = {
         status: 'ISSUED',
         payment_method: paymentMethod,
         notes: notes || '',
-        file_size_kb: 5.6, // Micro-PDF size strictly in KB
-        drive_file_url: 'https://drive.google.com',
+        file_size_kb: 5.4, // Micro-PDF size strictly in KB
         items: computedItems
       };
 
@@ -145,35 +161,36 @@ export const billingService = {
     }
 
     // Direct Supabase Insert
+    const insertPayload = {
+      invoice_number: invoiceNumber,
+      customer_name: customerName,
+      customer_email: customerEmail,
+      customer_phone: customerPhone,
+      customer_address: customerAddress,
+      invoice_date: invoiceDate || new Date(),
+      due_date: dueDate,
+      subtotal,
+      tax_rate: activeTaxRate,
+      tax_amount: taxAmount,
+      discount_amount: discountAmount,
+      total_amount: totalAmount,
+      amount_paid: 0,
+      balance_due: totalAmount,
+      status: 'ISSUED',
+      payment_method: paymentMethod,
+      notes
+    };
+
     const { data: invData, error: invErr } = await supabase
       .from('invoices')
-      .insert([{
-        invoice_number: invoiceNumber,
-        customer_name: customerName,
-        customer_email: customerEmail,
-        customer_phone: customerPhone,
-        customer_address: customerAddress,
-        invoice_date: invoiceDate || new Date(),
-        due_date: dueDate,
-        subtotal,
-        tax_rate: taxRate,
-        tax_amount: taxAmount,
-        discount_amount: discountAmount,
-        total_amount: totalAmount,
-        amount_paid: 0,
-        balance_due: totalAmount,
-        status: 'ISSUED',
-        payment_method: paymentMethod,
-        notes
-      }])
+      .insert([insertPayload])
       .select()
       .single();
 
     if (invErr) return { error: invErr };
 
-    // Insert line items with resilient column mapping
+    // Insert line items
     const lineItemRows = computedItems.map(it => {
-      // If item description exists, ensure it is preserved
       let displayName = it.item_name;
       if (it.item_description) {
         displayName = `${it.item_name} (${it.item_description})`;
@@ -203,40 +220,43 @@ export const billingService = {
             quantity: it.quantity,
             referenceNumber: invoiceNumber,
             partyName: customerName,
-            notes: `Auto-deducted for ${customerName} (${it.pieces} pcs)`
+            notes: `Stock-out dispatch for ${customerName} (${it.pieces} pcs)`
           });
         }
       }
     }
 
-    const completeInvoice = {
-      ...invData,
-      items: computedItems,
-      file_size_kb: 5.6
-    };
-
-    return { data: completeInvoice, error: null };
+    invData.items = computedItems;
+    invData.vehicle_no = vehicleNo;
+    invData.transport = transport;
+    return { data: invData, error: null };
   },
 
   async recordPayment(invoiceId, amount, paymentMethod = 'Bank Transfer') {
-    const payVal = parseFloat(amount);
-    if (!payVal || payVal <= 0) return { error: { message: 'Invalid payment amount' } };
+    const payVal = parseFloat(amount) || 0;
+    if (payVal <= 0) return { error: { message: 'Invalid payment amount' } };
 
     if (!isConfigured) {
       const invoices = getCachedInvoices();
-      const inv = invoices.find(i => i.id === invoiceId);
-      if (!inv) return { error: { message: 'Invoice not found' } };
+      const idx = invoices.findIndex(i => i.id === invoiceId);
+      if (idx !== -1) {
+        const inv = invoices[idx];
+        const newAmountPaid = Number(inv.amount_paid || 0) + payVal;
+        const newBalanceDue = Math.max(0, Number(inv.total_amount) - newAmountPaid);
+        const newStatus = newBalanceDue === 0 ? 'PAID' : (newAmountPaid > 0 ? 'PARTIALLY_PAID' : inv.status);
 
-      inv.amount_paid = Number(inv.amount_paid || 0) + payVal;
-      inv.balance_due = Math.max(0, Number(inv.total_amount) - inv.amount_paid);
-      if (inv.balance_due === 0) {
-        inv.status = 'PAID';
-      } else if (inv.amount_paid > 0) {
-        inv.status = 'PARTIALLY_PAID';
+        invoices[idx] = {
+          ...inv,
+          amount_paid: newAmountPaid,
+          balance_due: newBalanceDue,
+          status: newStatus,
+          payment_method: paymentMethod,
+          updated_at: new Date().toISOString()
+        };
+        saveCachedInvoices(invoices);
+        return { data: invoices[idx], error: null };
       }
-
-      saveCachedInvoices(invoices);
-      return { data: inv, error: null };
+      return { error: { message: 'Invoice not found' } };
     }
 
     const { data: inv, error: fetchErr } = await supabase

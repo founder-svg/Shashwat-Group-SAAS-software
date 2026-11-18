@@ -88,9 +88,6 @@ export default function Billing({
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
           <div className="flex items-center space-x-2">
-            <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-brand-100 text-brand-800">
-              MODULE 4
-            </span>
             <h2 className="text-xl font-bold text-slate-900 tracking-tight">Invoice Bill &amp; Invoicing</h2>
           </div>
           <p className="text-xs text-slate-500 mt-0.5">

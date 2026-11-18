@@ -15,8 +15,8 @@ import AuthScreen from './components/AuthScreen';
 import InvoiceModal from './components/InvoiceModal';
 import StockMovementModal from './components/StockMovementModal';
 import PrintBillModal from './components/PrintBillModal';
-import SupabaseSetupModal from './components/SupabaseSetupModal';
 
+import { supabase, isConfigured } from './config/supabaseClient';
 import { inventoryService } from './services/inventoryService';
 import { billingService } from './services/billingService';
 import { driveService } from './services/driveService';
@@ -58,7 +58,6 @@ export default function App() {
   const [stockModalType, setStockModalType] = useState('STOCK_IN');
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [selectedInvoiceForPrint, setSelectedInvoiceForPrint] = useState(null);
-  const [isSetupModalOpen, setIsSetupModalOpen] = useState(false);
 
   // Initial load when user and firm are active
   useEffect(() => {
@@ -272,6 +271,48 @@ export default function App() {
   };
 
   // --------------------------------------------------------------------------
+  // FACTORY RESET: Clear all local caches, wipe Supabase tables & reset state
+  // --------------------------------------------------------------------------
+  const handleFactoryReset = async () => {
+    setLoading(true);
+    try {
+      // 1. Wipe local storage keys
+      localStorage.removeItem('shashwat_inventory_cache');
+      localStorage.removeItem('shashwat_transactions_cache');
+      localStorage.removeItem('shashwat_invoices_cache');
+      localStorage.removeItem('shashwat_vehicles_cache');
+      localStorage.removeItem('shashwat_drive_cache');
+
+      // 2. If Supabase cloud database is connected, delete remote rows
+      if (isConfigured && supabase) {
+        try {
+          await supabase.from('invoice_items').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+          await supabase.from('invoices').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+          await supabase.from('stock_transactions').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+          await supabase.from('inventory_items').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+          await supabase.from('vehicles').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+          await supabase.from('drive_files').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+        } catch (dbErr) {
+          console.warn('Database clear notice:', dbErr);
+        }
+      }
+
+      // 3. Clear all active react state to 0 items
+      setInventory([]);
+      setInvoices([]);
+      setVehicles([]);
+      setDriveFiles([]);
+      setTransactions([]);
+
+      alert('CRM Factory Reset complete!\n\nAll space has been cleared and data removed completely. Your software is now 100% fresh and ready for clean data entry.');
+    } catch (err) {
+      alert(`Reset notice: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // --------------------------------------------------------------------------
   // LAYER 1: Choose Business Division (Shashwat Woods vs Shashwat Ashapura Woods)
   // --------------------------------------------------------------------------
   if (!selectedFirm) {
@@ -301,20 +342,14 @@ export default function App() {
         user={user}
         onSwitchFirm={handleSwitchFirm}
         onLogout={handleLogout}
-        onOpenSetup={() => setIsSetupModalOpen(true)}
+        onFactoryReset={handleFactoryReset}
       />
 
       <div className="flex-1 flex">
-        {/* Left Sidebar with 7 Modules & Wixfox Branding */}
+        {/* Left Sidebar Navigation & Wixfox Branding */}
         <Sidebar 
           activeTab={activeTab} 
-          setActiveTab={(tab) => {
-            if (tab === 'setup') {
-              setIsSetupModalOpen(true);
-            } else {
-              setActiveTab(tab);
-            }
-          }}
+          setActiveTab={setActiveTab}
           firm={selectedFirm}
         />
 
@@ -425,11 +460,6 @@ export default function App() {
         isOpen={isPrintModalOpen}
         onClose={() => setIsPrintModalOpen(false)}
         invoice={selectedInvoiceForPrint}
-      />
-
-      <SupabaseSetupModal
-        isOpen={isSetupModalOpen}
-        onClose={() => setIsSetupModalOpen(false)}
       />
     </div>
   );

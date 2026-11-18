@@ -67,13 +67,10 @@ export default function CloudDrive({ driveFiles = [], onDeleteFile, onUpdateFile
       {/* Header */}
       <div>
         <div className="flex items-center space-x-2">
-          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-brand-100 text-brand-800">
-            MODULE 6
-          </span>
-          <h2 className="text-xl font-bold text-slate-900 tracking-tight">DATA (Cloud Storage &amp; Records)</h2>
+          <h2 className="text-xl font-bold text-slate-900 tracking-tight">DATA (Document Storage &amp; Records)</h2>
         </div>
         <p className="text-xs text-slate-500 mt-0.5">
-          Integrated Google Drive (15 GB Free Lifetime). All customer invoices, stock receipts, and data files cataloged here with edit &amp; delete controls.
+          All customer invoices, stock receipts, and data files securely cataloged with edit &amp; delete controls.
         </p>
       </div>
 
@@ -82,19 +79,19 @@ export default function CloudDrive({ driveFiles = [], onDeleteFile, onUpdateFile
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div className="space-y-1">
             <span className="flex items-center gap-1.5 text-xs text-emerald-400 font-bold uppercase tracking-wider">
-              <ShieldCheck className="w-4 h-4" /> 100% Free Lifetime Cloud Drive Active
+              <ShieldCheck className="w-4 h-4" /> Cloud Storage Active
             </span>
             <h3 className="text-lg font-black tracking-tight">
-              {totalKB.toFixed(1)} KB Used <span className="text-slate-400 text-sm font-normal">of 15,000,000 KB (15 GB Free)</span>
+              {totalKB.toFixed(1)} KB Used
             </h3>
             <p className="text-xs text-slate-300">
-              Micro-PDF vector compression (under 8 KB/bill) allows storing up to <strong>1,800,000+ customer bills</strong> with zero storage fees!
+              High-efficiency document compression securely archives customer bills and operational records.
             </p>
           </div>
 
           <div className="bg-slate-800/80 px-4 py-3 rounded-xl border border-slate-700 text-right">
-            <span className="text-[11px] text-slate-400 block">Drive Health</span>
-            <span className="text-sm font-bold text-emerald-400">99.99% Free Space</span>
+            <span className="text-[11px] text-slate-400 block">System Status</span>
+            <span className="text-sm font-bold text-emerald-400">Online &amp; Active</span>
           </div>
         </div>
 
@@ -167,12 +164,12 @@ export default function CloudDrive({ driveFiles = [], onDeleteFile, onUpdateFile
                   </span>
 
                   <a
-                    href={f.web_view_link || 'https://drive.google.com'}
+                    href={f.web_view_link || '#'}
                     target="_blank"
                     rel="noreferrer"
                     className="flex items-center space-x-1 text-xs font-bold text-brand-600 hover:text-brand-800 transition"
                   >
-                    <span>View in Drive</span>
+                    <span>View Document</span>
                     <ExternalLink className="w-3.5 h-3.5" />
                   </a>
 

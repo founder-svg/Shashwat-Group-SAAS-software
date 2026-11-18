@@ -401,9 +401,6 @@ export default function ProductManagement({ firm, inventory = [], onAddItem, onU
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
           <div className="flex items-center space-x-2">
-            <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-100 text-amber-900 border border-amber-300">
-              MODULE 2
-            </span>
             <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
               isAshapura ? 'bg-amber-800 text-amber-100' : 'bg-emerald-700 text-white'
             }`}>

@@ -34,9 +34,6 @@ export default function StockTransactions({ transactions = [], onDeleteTransacti
     <div className="space-y-5">
       <div>
         <div className="flex items-center space-x-2">
-          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-brand-100 text-brand-800">
-            MODULE 7
-          </span>
           <h2 className="text-xl font-bold text-slate-900 tracking-tight">History (Stock Movement &amp; Activity Audit)</h2>
         </div>
         <p className="text-xs text-slate-500 mt-0.5">

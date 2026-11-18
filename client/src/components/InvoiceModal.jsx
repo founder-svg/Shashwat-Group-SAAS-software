@@ -447,7 +447,7 @@ export default function InvoiceModal({ isOpen, onClose, onCreated, inventoryItem
                   className="rounded text-amber-600 focus:ring-amber-500"
                 />
                 <label htmlFor="stockDeduct" className="text-slate-700 font-medium">
-                  Automatically register stock-out dispatch in Inventory (Module 5)
+                  Automatically register stock-out dispatch in Inventory
                 </label>
               </div>
             </div>

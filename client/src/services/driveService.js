@@ -5,9 +5,12 @@ const LOCAL_DRIVE_KEY = 'shashwat_drive_cache';
 function getCachedFiles() {
   const cached = localStorage.getItem(LOCAL_DRIVE_KEY);
   if (cached) {
-    try { return JSON.parse(cached); } catch (e) {}
+    try { 
+      const parsed = JSON.parse(cached);
+      return parsed.filter(f => !['df-1', 'df-2', 'df-3'].includes(f.id));
+    } catch (e) {}
   }
-  return initialDemoData.driveFiles;
+  return [];
 }
 
 function saveCachedFiles(files) {

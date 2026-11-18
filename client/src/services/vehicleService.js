@@ -5,9 +5,12 @@ const LOCAL_VEHICLES_KEY = 'shashwat_vehicles_cache';
 function getCachedVehicles() {
   const cached = localStorage.getItem(LOCAL_VEHICLES_KEY);
   if (cached) {
-    try { return JSON.parse(cached); } catch (e) {}
+    try { 
+      const parsed = JSON.parse(cached);
+      return parsed.filter(v => !['v-1', 'v-2', 'v-3'].includes(v.id));
+    } catch (e) {}
   }
-  return initialDemoData.vehicles;
+  return [];
 }
 
 function saveCachedVehicles(vehicles) {

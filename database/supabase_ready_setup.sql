@@ -173,32 +173,6 @@ CREATE POLICY "Allow all operations on drive_files" ON drive_files FOR ALL USING
 CREATE POLICY "Allow all operations on vehicles" ON vehicles FOR ALL USING (true) WITH CHECK (true);
 
 -- ==============================================================================
--- 9. POPULATE INITIAL SEED DATA
+-- 9. FRESH CLEAN SETUP (No demo or sample seed rows)
 -- ==============================================================================
-
-INSERT INTO inventory_items (id, sku, name, category, item_type, unit, cost_price, selling_price, current_stock, min_reorder_level)
-VALUES 
-    ('e0000000-0000-0000-0000-000000000001', 'RM-STEEL-01', 'High-Grade Industrial Steel Sheets', 'Raw Materials', 'raw_material', 'kg', 85.00, 110.00, 1500.00, 300.00),
-    ('e0000000-0000-0000-0000-000000000002', 'FG-PANEL-01', 'Custom Industrial Control Panel 100A', 'Electrical & Control', 'finished_good', 'pcs', 12500.00, 19500.00, 45.00, 10.00),
-    ('e0000000-0000-0000-0000-000000000003', 'CN-COPPER-01', 'Copper Wiring Spool 50m', 'Consumables', 'consumable', 'box', 1800.00, 2400.00, 8.00, 15.00)
-ON CONFLICT DO NOTHING;
-
-INSERT INTO invoices (id, invoice_number, customer_name, customer_email, customer_phone, subtotal, tax_rate, tax_amount, total_amount, amount_paid, balance_due, status, payment_method, notes)
-VALUES 
-    ('10000000-0000-0000-0000-000000000001', 'INV-2026-001', 'Patel Enterprises', 'vikram@patelenterprises.in', '+91-9988776655', 97500.00, 18.00, 17550.00, 115050.00, 50000.00, 65050.00, 'PARTIALLY_PAID', 'Bank Transfer', 'Supply of 5 units Custom Industrial Control Panel 100A')
-ON CONFLICT DO NOTHING;
-
-INSERT INTO invoice_items (invoice_id, item_name, quantity, unit_price, total_price)
-VALUES 
-    ('10000000-0000-0000-0000-000000000001', 'Custom Industrial Control Panel 100A', 5.00, 19500.00, 97500.00);
-
-INSERT INTO stock_transactions (transaction_type, item_id, quantity, unit_cost, total_cost, balance_after, reference_number, party_name, notes)
-VALUES 
-    ('STOCK_IN', 'e0000000-0000-0000-0000-000000000001', 500.00, 85.00, 42500.00, 1500.00, 'PO-2026-089', 'Tata Steel Suppliers', 'Bulk stock input received'),
-    ('STOCK_OUT', 'e0000000-0000-0000-0000-000000000002', 5.00, 12500.00, 62500.00, 45.00, 'DISP-2026-012', 'Patel Enterprises', 'Dispatched against Invoice #INV-2026-001');
-
-INSERT INTO vehicles (vehicle_number, vehicle_type, driver_name, driver_phone, capacity_kg, status, current_destination, notes)
-VALUES
-    ('MH-12-SG-8842', 'Eicher 14ft Truck', 'Ramesh Jadhav', '+91-9822334455', 3500.00, 'available', 'Warehouse Base', 'Routine service completed on 12 Nov'),
-    ('MH-14-SG-1090', 'Tata Ace Mini Van', 'Sunil Pawar', '+91-9877665544', 1000.00, 'on_delivery', 'Industrial Area Phase 2', 'Dispatching Invoice #INV-2026-001 to Patel Enterprises'),
-    ('MH-12-SG-5501', 'Mahindra Bolero Pickup', 'Anil Shinde', '+91-9988112233', 1500.00, 'available', 'Warehouse Base', 'Standby for raw material pickup');
+-- All tables are created empty, ready for real enterprise data entry.

@@ -56,10 +56,10 @@ export default function Sidebar({ activeTab, setActiveTab, firm }) {
           </div>
         </div>
 
-        {/* Modules Section Header */}
+        {/* Navigation Section Header */}
         <div className="px-4 pt-4 pb-2">
           <p className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">
-            System Modules
+            Operations Menu
           </p>
         </div>
 
@@ -86,12 +86,6 @@ export default function Sidebar({ activeTab, setActiveTab, firm }) {
                   </div>
                   <span className="truncate">{item.label}</span>
                 </div>
-
-                <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
-                  isActive ? 'bg-white/20 text-white font-bold' : 'text-slate-400 bg-slate-800/60'
-                }`}>
-                  M{item.number}
-                </span>
               </button>
             );
           })}

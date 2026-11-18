@@ -7,9 +7,13 @@ const LOCAL_TRANS_KEY = 'shashwat_transactions_cache';
 function getCachedItems() {
   const cached = localStorage.getItem(LOCAL_STORAGE_KEY);
   if (cached) {
-    try { return JSON.parse(cached); } catch (e) {}
+    try { 
+      const parsed = JSON.parse(cached);
+      // Filter out any legacy mock demo items
+      return parsed.filter(i => !['e1', 'e2', 'e3'].includes(i.id));
+    } catch (e) {}
   }
-  return initialDemoData.inventory;
+  return [];
 }
 
 function saveCachedItems(items) {
@@ -19,9 +23,12 @@ function saveCachedItems(items) {
 function getCachedTransactions() {
   const cached = localStorage.getItem(LOCAL_TRANS_KEY);
   if (cached) {
-    try { return JSON.parse(cached); } catch (e) {}
+    try { 
+      const parsed = JSON.parse(cached);
+      return parsed.filter(t => !['t-1', 't-2'].includes(t.id));
+    } catch (e) {}
   }
-  return initialDemoData.transactions;
+  return [];
 }
 
 function saveCachedTransactions(list) {

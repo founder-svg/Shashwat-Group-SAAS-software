@@ -18,7 +18,7 @@ export default function FirmSelectionScreen({ onSelectFirm }) {
           SHASHWAT GROUP
         </h1>
         <p className="text-slate-400 text-sm sm:text-base max-w-xl mx-auto mt-2 font-medium">
-          Integrated SaaS &amp; CRM ERP for Billing, Inventory, Vehicle Logistics &amp; Cloud Drive. Select your commercial division to begin.
+          Commercial Management System for Billing, Inventory, and Transport Logistics. Select your business division to begin.
         </p>
       </header>
 

@@ -1,13 +1,21 @@
 import React from 'react';
-import { Building2, CloudCheck, CloudOff, Users, LogOut, RefreshCw, Shield } from 'lucide-react';
+import { Building2, CloudCheck, CloudOff, Users, LogOut, RefreshCw, Shield, RotateCcw } from 'lucide-react';
 import { isConfigured } from '../config/supabaseClient';
 
-export default function Navbar({ firm, user, onSwitchFirm, onLogout, onOpenSetup }) {
+export default function Navbar({ firm, user, onSwitchFirm, onLogout, onFactoryReset }) {
   const getInitials = (name) => {
     if (!name) return 'SG';
     const parts = name.trim().split(' ');
     if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
     return name.substring(0, 2).toUpperCase();
+  };
+
+  const handleResetClick = () => {
+    if (confirm("FACTORY RESET WARNING:\n\nAre you sure you want to permanently clear all space and delete all data (inventory, invoices, vehicles, documents, and history)?\n\nThis will give you completely fresh, clean software to enter new records.")) {
+      if (onFactoryReset) {
+        onFactoryReset();
+      }
+    }
   };
 
   return (
@@ -59,27 +67,11 @@ export default function Navbar({ firm, user, onSwitchFirm, onLogout, onOpenSetup
 
         {/* Top Right: Status & User Profile */}
         <div className="flex items-center space-x-3 sm:space-x-4">
-          {/* Cloud Database Status Badge */}
-          <button
-            onClick={onOpenSetup}
-            className={`hidden md:flex items-center space-x-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition border ${
-              isConfigured
-                ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-                : 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100'
-            }`}
-          >
-            {isConfigured ? (
-              <>
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span>Supabase Cloud Active</span>
-              </>
-            ) : (
-              <>
-                <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-                <span>Connect Cloud Database</span>
-              </>
-            )}
-          </button>
+          {/* Cloud Sync Status Badge (Neutral & Professional) */}
+          <div className="hidden md:flex items-center space-x-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border bg-emerald-50 text-emerald-700 border-emerald-200">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span>Cloud Synced</span>
+          </div>
 
           {/* Active Logged-in User Profile */}
           <div className="flex items-center space-x-2.5 pl-3 border-l border-slate-200">
@@ -97,11 +89,21 @@ export default function Navbar({ firm, user, onSwitchFirm, onLogout, onOpenSetup
               </span>
             </div>
 
+            {/* Factory Reset Button */}
+            <button
+              onClick={handleResetClick}
+              type="button"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition ml-1"
+              title="Factory Reset (Clear All Data)"
+            >
+              <RotateCcw className="w-4 h-4" />
+            </button>
+
             {/* Logout Button */}
             <button
               onClick={onLogout}
               type="button"
-              className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition ml-1"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition"
               title="Sign Out"
             >
               <LogOut className="w-4 h-4" />

@@ -192,7 +192,7 @@ export default function PrintBillModal({ isOpen, onClose, invoice }) {
               <p>1. Payment due within specified due date.</p>
               <p>2. Goods once sold cannot be returned without prior authorization.</p>
               <p className="text-[9px] text-emerald-600 mt-2 font-mono">
-                Micro-optimized vector document (~5 KB) • Synced to Google Drive
+                Micro-optimized vector document (~5 KB) • Electronically Archived
               </p>
             </div>
             <div className="text-right">

@@ -132,9 +132,6 @@ export default function VehicleManagement({
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
           <div className="flex items-center space-x-2">
-            <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-brand-100 text-brand-800">
-              MODULE 3
-            </span>
             <h2 className="text-xl font-black text-slate-900 tracking-tight flex items-center gap-1.5">
               <Truck className="w-5 h-5 text-brand-600" />
               <span>Vehicle &amp; Fleet Management</span>

@@ -6,9 +6,12 @@ const LOCAL_INVOICE_KEY = 'shashwat_invoices_cache';
 function getCachedInvoices() {
   const cached = localStorage.getItem(LOCAL_INVOICE_KEY);
   if (cached) {
-    try { return JSON.parse(cached); } catch (e) {}
+    try { 
+      const parsed = JSON.parse(cached);
+      return parsed.filter(i => !['inv-1'].includes(i.id));
+    } catch (e) {}
   }
-  return initialDemoData.invoices;
+  return [];
 }
 
 function saveCachedInvoices(invoices) {

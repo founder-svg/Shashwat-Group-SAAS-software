@@ -113,7 +113,35 @@ export default function App() {
     localStorage.removeItem('shashwat_user');
   };
 
-  // Actions
+  // Actions for Items (Product & Inventory)
+  const handleAddItem = async (item) => {
+    const res = await inventoryService.addItem(item);
+    if (res.data) {
+      loadAllData();
+    } else if (res.error) {
+      alert(`Error adding item: ${res.error.message}`);
+    }
+  };
+
+  const handleUpdateItem = async (id, updates) => {
+    const res = await inventoryService.updateItem(id, updates);
+    if (res.data) {
+      loadAllData();
+    } else if (res.error) {
+      alert(`Error updating item: ${res.error.message}`);
+    }
+  };
+
+  const handleDeleteItem = async (id) => {
+    const res = await inventoryService.deleteItem(id);
+    if (!res.error) {
+      loadAllData();
+    } else {
+      alert(`Error deleting item: ${res.error.message}`);
+    }
+  };
+
+  // Actions for Invoices
   const handleCreateInvoice = async (invoiceData) => {
     const res = await billingService.createInvoice(invoiceData);
     if (res.data) {
@@ -122,6 +150,99 @@ export default function App() {
       setIsPrintModalOpen(true);
     } else if (res.error) {
       alert(`Error creating invoice: ${res.error.message}`);
+    }
+  };
+
+  const handleUpdateInvoice = async (id, updates) => {
+    const res = await billingService.updateInvoice(id, updates);
+    if (res.data) {
+      loadAllData();
+    } else if (res.error) {
+      alert(`Error updating invoice: ${res.error.message}`);
+    }
+  };
+
+  const handleDeleteInvoice = async (id) => {
+    const res = await billingService.deleteInvoice(id);
+    if (!res.error) {
+      loadAllData();
+    } else {
+      alert(`Error deleting invoice: ${res.error.message}`);
+    }
+  };
+
+  const handleRecordPayment = async (invoiceId, amount, paymentMethod) => {
+    const res = await billingService.recordPayment(invoiceId, amount, paymentMethod);
+    if (res.data) {
+      loadAllData();
+    } else if (res.error) {
+      alert(`Payment error: ${res.error.message}`);
+    }
+  };
+
+  // Actions for Vehicles
+  const handleAddVehicle = async (vehicleData) => {
+    const res = await vehicleService.addVehicle(vehicleData);
+    if (res.data) {
+      loadAllData();
+    } else if (res.error) {
+      alert(`Error adding vehicle: ${res.error.message}`);
+    }
+  };
+
+  const handleUpdateVehicle = async (id, updates) => {
+    const res = await vehicleService.updateVehicle(id, updates);
+    if (res.data) {
+      loadAllData();
+    } else if (res.error) {
+      alert(`Error updating vehicle: ${res.error.message}`);
+    }
+  };
+
+  const handleDeleteVehicle = async (id) => {
+    const res = await vehicleService.deleteVehicle(id);
+    if (!res.error) {
+      loadAllData();
+    } else {
+      alert(`Error deleting vehicle: ${res.error.message}`);
+    }
+  };
+
+  const handleUpdateVehicleStatus = async (id, status, currentDestination) => {
+    const res = await vehicleService.updateStatus(id, status, currentDestination);
+    if (res.data) {
+      loadAllData();
+    } else if (res.error) {
+      alert(`Error updating vehicle status: ${res.error.message}`);
+    }
+  };
+
+  // Actions for Drive Files
+  const handleUpdateFile = async (id, updates) => {
+    const res = await driveService.updateFile(id, updates);
+    if (res.data) {
+      loadAllData();
+    } else if (res.error) {
+      alert(`Error updating file: ${res.error.message}`);
+    }
+  };
+
+  const handleDeleteFile = async (id) => {
+    const res = await driveService.deleteFile(id);
+    if (!res.error) {
+      loadAllData();
+    } else {
+      alert(`Error deleting file: ${res.error.message}`);
+    }
+  };
+
+  // Actions for History Transactions
+  const handleDeleteTransaction = async (id) => {
+    const res = await inventoryService.deleteTransaction(id);
+    if (!res.error) {
+      loadAllData();
+    } else {
+      alert(`Error deleting history log: ${res.error.message}`);
     }
   };
 
@@ -137,42 +258,6 @@ export default function App() {
       alert(`Error: ${res.error.message}`);
     } else {
       loadAllData();
-    }
-  };
-
-  const handleAddItem = async (item) => {
-    const res = await inventoryService.addItem(item);
-    if (res.data) {
-      loadAllData();
-    } else if (res.error) {
-      alert(`Error adding item: ${res.error.message}`);
-    }
-  };
-
-  const handleRecordPayment = async (invoiceId, amount, paymentMethod) => {
-    const res = await billingService.recordPayment(invoiceId, amount, paymentMethod);
-    if (res.data) {
-      loadAllData();
-    } else if (res.error) {
-      alert(`Payment error: ${res.error.message}`);
-    }
-  };
-
-  const handleAddVehicle = async (vehicleData) => {
-    const res = await vehicleService.addVehicle(vehicleData);
-    if (res.data) {
-      loadAllData();
-    } else if (res.error) {
-      alert(`Error adding vehicle: ${res.error.message}`);
-    }
-  };
-
-  const handleUpdateVehicleStatus = async (id, status, currentDestination) => {
-    const res = await vehicleService.updateStatus(id, status, currentDestination);
-    if (res.data) {
-      loadAllData();
-    } else if (res.error) {
-      alert(`Error updating vehicle: ${res.error.message}`);
     }
   };
 
@@ -252,50 +337,65 @@ export default function App() {
                 />
               )}
 
-              {/* Module 2: Product Management */}
+              {/* Module 2: Product Management with Edit & Delete */}
               {activeTab === 'products' && (
                 <ProductManagement
                   inventory={inventory}
                   onAddItem={handleAddItem}
+                  onUpdateItem={handleUpdateItem}
+                  onDeleteItem={handleDeleteItem}
                 />
               )}
 
-              {/* Module 3: Vehicle Management */}
+              {/* Module 3: Vehicle Management with Edit & Delete */}
               {activeTab === 'vehicles' && (
                 <VehicleManagement
                   vehicles={vehicles}
                   onAddVehicle={handleAddVehicle}
+                  onUpdateVehicle={handleUpdateVehicle}
+                  onDeleteVehicle={handleDeleteVehicle}
                   onUpdateStatus={handleUpdateVehicleStatus}
                 />
               )}
 
-              {/* Module 4: Invoice Bill */}
+              {/* Module 4: Invoice Bill with Edit & Delete */}
               {activeTab === 'billing' && (
                 <Billing
                   invoices={invoices}
                   onOpenCreate={() => setIsInvoiceModalOpen(true)}
                   onPrint={openPrintModal}
                   onRecordPayment={handleRecordPayment}
+                  onUpdateInvoice={handleUpdateInvoice}
+                  onDeleteInvoice={handleDeleteInvoice}
                 />
               )}
 
-              {/* Module 5: Inventory Management */}
+              {/* Module 5: Inventory Management with Edit & Delete */}
               {activeTab === 'inventory' && (
                 <Inventory
                   inventory={inventory}
                   onOpenMovement={openStockModal}
                   onAddItem={handleAddItem}
+                  onUpdateItem={handleUpdateItem}
+                  onDeleteItem={handleDeleteItem}
                 />
               )}
 
-              {/* Module 6: DATA */}
+              {/* Module 6: DATA (Cloud Storage) with Edit & Delete */}
               {activeTab === 'data' && (
-                <CloudDrive driveFiles={driveFiles} />
+                <CloudDrive 
+                  driveFiles={driveFiles} 
+                  onUpdateFile={handleUpdateFile}
+                  onDeleteFile={handleDeleteFile}
+                />
               )}
 
-              {/* Module 7: History */}
+              {/* Module 7: History (Audit Log) with Delete Entry */}
               {activeTab === 'history' && (
-                <StockTransactions transactions={transactions} />
+                <StockTransactions 
+                  transactions={transactions} 
+                  onDeleteTransaction={handleDeleteTransaction}
+                />
               )}
             </>
           )}

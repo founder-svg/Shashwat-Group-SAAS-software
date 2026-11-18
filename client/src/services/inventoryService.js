@@ -276,6 +276,110 @@ export const inventoryService = {
     return { data: { currentStock: newStock, transaction: transData }, error: transErr };
   },
 
+  async updateItem(id, updates) {
+    let formattedDesc = updates.description || '';
+    if (updates.length && updates.width && updates.thickness) {
+      const specTag = `[Specs: ${updates.length}L × ${updates.width}W × ${updates.thickness}T | ${updates.cft || 0} CFT]`;
+      if (!formattedDesc.includes('[Specs:')) {
+        formattedDesc = formattedDesc ? `${formattedDesc} ${specTag}` : specTag;
+      }
+    }
+
+    const payload = {
+      ...updates,
+      description: formattedDesc,
+      cost_price: Number(updates.cost_price) || 0,
+      selling_price: Number(updates.selling_price) || 0,
+      min_reorder_level: Number(updates.min_reorder_level) || 10,
+      updated_at: new Date()
+    };
+
+    if (!isConfigured) {
+      const items = getCachedItems();
+      const idx = items.findIndex(i => i.id === id);
+      if (idx !== -1) {
+        items[idx] = { ...items[idx], ...payload };
+        saveCachedItems(items);
+        return { data: items[idx], error: null };
+      }
+      return { error: { message: 'Item not found in cache' } };
+    }
+
+    // Try updating directly
+    let { data, error } = await supabase
+      .from('inventory_items')
+      .update(payload)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error && (error.message?.includes('column') || error.code === '42703')) {
+      const cleanPayload = {
+        sku: payload.sku,
+        name: payload.name,
+        description: payload.description,
+        category: payload.category || 'General',
+        item_type: payload.item_type || 'finished_good',
+        unit: payload.unit || 'CFT',
+        cost_price: payload.cost_price,
+        selling_price: payload.selling_price,
+        min_reorder_level: payload.min_reorder_level,
+        updated_at: new Date()
+      };
+
+      const fallbackRes = await supabase
+        .from('inventory_items')
+        .update(cleanPayload)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (fallbackRes.data) {
+        return {
+          data: {
+            ...fallbackRes.data,
+            length: payload.length,
+            width: payload.width,
+            thickness: payload.thickness,
+            cft: payload.cft
+          },
+          error: null
+        };
+      }
+      return fallbackRes;
+    }
+
+    return { data: enrichItemWithWoodSpecs(data), error };
+  },
+
+  async deleteItem(id) {
+    if (!isConfigured) {
+      let items = getCachedItems();
+      items = items.filter(i => i.id !== id);
+      saveCachedItems(items);
+      return { data: { success: true }, error: null };
+    }
+    const { data, error } = await supabase
+      .from('inventory_items')
+      .delete()
+      .eq('id', id);
+    return { data, error };
+  },
+
+  async deleteTransaction(id) {
+    if (!isConfigured) {
+      let list = getCachedTransactions();
+      list = list.filter(t => t.id !== id);
+      saveCachedTransactions(list);
+      return { data: { success: true }, error: null };
+    }
+    const { data, error } = await supabase
+      .from('stock_transactions')
+      .delete()
+      .eq('id', id);
+    return { data, error };
+  },
+
   async getTransactions() {
     if (!isConfigured) {
       return { data: getCachedTransactions(), error: null };

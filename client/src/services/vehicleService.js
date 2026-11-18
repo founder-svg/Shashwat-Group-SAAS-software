@@ -66,5 +66,41 @@ export const vehicleService = {
       .select()
       .single();
     return { data, error };
+  },
+
+  async updateVehicle(id, vehicleData) {
+    if (!isConfigured) {
+      const list = getCachedVehicles();
+      const idx = list.findIndex(v => v.id === id);
+      if (idx !== -1) {
+        list[idx] = { ...list[idx], ...vehicleData, updated_at: new Date().toISOString() };
+        saveCachedVehicles(list);
+        return { data: list[idx], error: null };
+      }
+      return { error: { message: 'Vehicle not found' } };
+    }
+
+    const { data, error } = await supabase
+      .from('vehicles')
+      .update({ ...vehicleData, updated_at: new Date() })
+      .eq('id', id)
+      .select()
+      .single();
+    return { data, error };
+  },
+
+  async deleteVehicle(id) {
+    if (!isConfigured) {
+      let list = getCachedVehicles();
+      list = list.filter(v => v.id !== id);
+      saveCachedVehicles(list);
+      return { data: { success: true }, error: null };
+    }
+
+    const { data, error } = await supabase
+      .from('vehicles')
+      .delete()
+      .eq('id', id);
+    return { data, error };
   }
 };

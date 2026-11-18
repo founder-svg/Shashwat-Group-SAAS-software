@@ -62,5 +62,41 @@ export const driveService = {
       .single();
 
     return { data, error };
+  },
+
+  async updateFile(fileId, updates) {
+    if (!isConfigured) {
+      const files = getCachedFiles();
+      const idx = files.findIndex(f => f.id === fileId);
+      if (idx !== -1) {
+        files[idx] = { ...files[idx], ...updates };
+        saveCachedFiles(files);
+        return { data: files[idx], error: null };
+      }
+      return { error: { message: 'File not found' } };
+    }
+
+    const { data, error } = await supabase
+      .from('drive_files')
+      .update(updates)
+      .eq('id', fileId)
+      .select()
+      .single();
+    return { data, error };
+  },
+
+  async deleteFile(fileId) {
+    if (!isConfigured) {
+      let files = getCachedFiles();
+      files = files.filter(f => f.id !== fileId);
+      saveCachedFiles(files);
+      return { data: { success: true }, error: null };
+    }
+
+    const { data, error } = await supabase
+      .from('drive_files')
+      .delete()
+      .eq('id', fileId);
+    return { data, error };
   }
 };

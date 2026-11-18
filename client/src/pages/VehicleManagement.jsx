@@ -9,21 +9,53 @@ import {
   Clock, 
   Wrench,
   Shield,
-  Gauge
+  Gauge,
+  Pencil,
+  Trash2,
+  X
 } from 'lucide-react';
 
-export default function VehicleManagement({ vehicles, onAddVehicle, onUpdateStatus }) {
+export default function VehicleManagement({ 
+  vehicles = [], 
+  onAddVehicle, 
+  onUpdateVehicle, 
+  onDeleteVehicle, 
+  onUpdateStatus 
+}) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editingVehicle, setEditingVehicle] = useState(null);
 
-  // Form State
+  // Form State for Add
   const [vehicleNumber, setVehicleNumber] = useState('');
   const [vehicleType, setVehicleType] = useState('Truck');
   const [driverName, setDriverName] = useState('');
   const [driverPhone, setDriverPhone] = useState('');
   const [capacityKg, setCapacityKg] = useState('2000');
   const [notes, setNotes] = useState('');
+
+  // Form State for Edit
+  const [editNumber, setEditNumber] = useState('');
+  const [editType, setEditType] = useState('');
+  const [editDriver, setEditDriver] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [editCapacity, setEditCapacity] = useState('');
+  const [editStatus, setEditStatus] = useState('available');
+  const [editDestination, setEditDestination] = useState('');
+  const [editNotes, setEditNotes] = useState('');
+
+  const openEditModal = (v) => {
+    setEditingVehicle(v);
+    setEditNumber(v.vehicle_number || '');
+    setEditType(v.vehicle_type || 'Truck');
+    setEditDriver(v.driver_name || '');
+    setEditPhone(v.driver_phone || '');
+    setEditCapacity(v.capacity_kg !== undefined ? v.capacity_kg.toString() : '2000');
+    setEditStatus(v.status || 'available');
+    setEditDestination(v.current_destination || 'Warehouse Base');
+    setEditNotes(v.notes || '');
+  };
 
   const filteredVehicles = vehicles.filter((v) => {
     const matchesSearch = 
@@ -40,16 +72,16 @@ export default function VehicleManagement({ vehicles, onAddVehicle, onUpdateStat
 
   const handleCreateSubmit = (e) => {
     e.preventDefault();
-    if (!vehicleNumber) {
+    if (!vehicleNumber.trim()) {
       alert('Vehicle registration number is required');
       return;
     }
 
     onAddVehicle({
-      vehicle_number: vehicleNumber.toUpperCase(),
+      vehicle_number: vehicleNumber.trim().toUpperCase(),
       vehicle_type: vehicleType,
-      driver_name: driverName || 'Unassigned',
-      driver_phone: driverPhone || '',
+      driver_name: driverName.trim() || 'Unassigned',
+      driver_phone: driverPhone.trim(),
       capacity_kg: parseFloat(capacityKg) || 1000,
       status: 'available',
       current_destination: 'Warehouse Base',
@@ -63,6 +95,37 @@ export default function VehicleManagement({ vehicles, onAddVehicle, onUpdateStat
     setNotes('');
   };
 
+  const handleEditSubmit = (e) => {
+    e.preventDefault();
+    if (!editNumber.trim()) {
+      alert('Vehicle registration number is required');
+      return;
+    }
+
+    if (onUpdateVehicle) {
+      onUpdateVehicle(editingVehicle.id, {
+        vehicle_number: editNumber.trim().toUpperCase(),
+        vehicle_type: editType,
+        driver_name: editDriver.trim() || 'Unassigned',
+        driver_phone: editPhone.trim(),
+        capacity_kg: parseFloat(editCapacity) || 1000,
+        status: editStatus,
+        current_destination: editDestination.trim() || 'Warehouse Base',
+        notes: editNotes.trim()
+      });
+    }
+
+    setEditingVehicle(null);
+  };
+
+  const handleDeleteClick = (v) => {
+    if (confirm(`Are you sure you want to delete vehicle "${v.vehicle_number}" (${v.driver_name})?`)) {
+      if (onDeleteVehicle) {
+        onDeleteVehicle(v.id);
+      }
+    }
+  };
+
   return (
     <div className="space-y-5">
       {/* Module Header */}
@@ -72,44 +135,47 @@ export default function VehicleManagement({ vehicles, onAddVehicle, onUpdateStat
             <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-brand-100 text-brand-800">
               MODULE 3
             </span>
-            <h2 className="text-xl font-black text-slate-900 tracking-tight">Vehicle & Fleet Management</h2>
+            <h2 className="text-xl font-black text-slate-900 tracking-tight flex items-center gap-1.5">
+              <Truck className="w-5 h-5 text-brand-600" />
+              <span>Vehicle &amp; Fleet Management</span>
+            </h2>
           </div>
           <p className="text-xs text-slate-500 mt-0.5">
-            Log delivery fleet, driver assignments, payload capacity, and shipment dispatch locations.
+            Log delivery fleet, driver assignments, payload capacity, and edit or delete transport records.
           </p>
         </div>
 
         <button
           onClick={() => setShowAddModal(true)}
-          className="flex items-center space-x-1.5 px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-bold transition shadow-sm"
+          className="flex items-center space-x-1.5 px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition shadow-sm"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-4 h-4 text-amber-400" />
           <span>Add New Vehicle</span>
         </button>
       </div>
 
       {/* Fleet KPI Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
-          <span className="text-[10px] font-bold text-slate-400 uppercase">Total Fleet</span>
+        <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Fleet</span>
           <p className="text-lg font-black text-slate-900 mt-0.5">{vehicles.length} Vehicles</p>
         </div>
-        <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
-          <span className="text-[10px] font-bold text-emerald-600 uppercase">Available / Standby</span>
+        <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
+          <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Available / Standby</span>
           <p className="text-lg font-black text-emerald-700 mt-0.5">{availableCount} Ready</p>
         </div>
-        <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
-          <span className="text-[10px] font-bold text-blue-600 uppercase">On Active Delivery</span>
+        <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
+          <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">On Active Delivery</span>
           <p className="text-lg font-black text-blue-700 mt-0.5">{onDeliveryCount} Dispatched</p>
         </div>
-        <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
-          <span className="text-[10px] font-bold text-amber-600 uppercase">Maintenance</span>
+        <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
+          <span className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">Maintenance</span>
           <p className="text-lg font-black text-amber-700 mt-0.5">{maintenanceCount} In Service</p>
         </div>
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row justify-between items-center gap-3">
+      <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-xs flex flex-col sm:flex-row justify-between items-center gap-3">
         <div className="relative w-full sm:w-72">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
           <input
@@ -128,7 +194,7 @@ export default function VehicleManagement({ vehicles, onAddVehicle, onUpdateStat
               onClick={() => setStatusFilter(st)}
               className={`px-3 py-1.5 rounded-lg font-semibold transition ${
                 statusFilter === st
-                  ? 'bg-slate-900 text-white'
+                  ? 'bg-slate-900 text-white shadow-xs'
                   : 'text-slate-600 hover:bg-slate-100'
               }`}
             >
@@ -152,7 +218,7 @@ export default function VehicleManagement({ vehicles, onAddVehicle, onUpdateStat
             return (
               <div 
                 key={v.id}
-                className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm hover:shadow-md transition space-y-3.5"
+                className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs hover:shadow-md transition space-y-3.5 relative group"
               >
                 {/* Card Top */}
                 <div className="flex items-start justify-between">
@@ -170,18 +236,38 @@ export default function VehicleManagement({ vehicles, onAddVehicle, onUpdateStat
                     </div>
                   </div>
 
-                  <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                    isAvail
-                      ? 'bg-emerald-100 text-emerald-800'
-                      : isOnDeliv
-                      ? 'bg-blue-100 text-blue-800'
-                      : 'bg-amber-100 text-amber-800'
-                  }`}>
-                    {isAvail && <CheckCircle2 className="w-3 h-3 text-emerald-600" />}
-                    {isOnDeliv && <Clock className="w-3 h-3 text-blue-600" />}
-                    {!isAvail && !isOnDeliv && <Wrench className="w-3 h-3 text-amber-600" />}
-                    {isAvail ? 'Available' : isOnDeliv ? 'On Delivery' : 'Maintenance'}
-                  </span>
+                  <div className="flex items-center space-x-1">
+                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                      isAvail
+                        ? 'bg-emerald-100 text-emerald-800'
+                        : isOnDeliv
+                        ? 'bg-blue-100 text-blue-800'
+                        : 'bg-amber-100 text-amber-800'
+                    }`}>
+                      {isAvail && <CheckCircle2 className="w-3 h-3 text-emerald-600" />}
+                      {isOnDeliv && <Clock className="w-3 h-3 text-blue-600" />}
+                      {!isAvail && !isOnDeliv && <Wrench className="w-3 h-3 text-amber-600" />}
+                      {isAvail ? 'Available' : isOnDeliv ? 'On Delivery' : 'Maintenance'}
+                    </span>
+
+                    {/* Edit & Delete Action Buttons */}
+                    <button
+                      onClick={() => openEditModal(v)}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition"
+                      title="Edit Vehicle"
+                    >
+                      <Pencil className="w-3 h-3" />
+                      <span>Edit</span>
+                    </button>
+                    <button
+                      onClick={() => handleDeleteClick(v)}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-bold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 transition"
+                      title="Delete Vehicle"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      <span>Delete</span>
+                    </button>
+                  </div>
                 </div>
 
                 {/* Driver & Details */}
@@ -218,24 +304,24 @@ export default function VehicleManagement({ vehicles, onAddVehicle, onUpdateStat
                   <div className="flex space-x-1">
                     <button
                       onClick={() => onUpdateStatus(v.id, 'available', 'Warehouse Base')}
-                      className={`px-2 py-1 rounded text-[10px] font-bold transition ${
-                        isAvail ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      className={`px-2 py-0.5 rounded text-[10px] font-semibold transition ${
+                        isAvail ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-emerald-50'
                       }`}
                     >
                       Available
                     </button>
                     <button
-                      onClick={() => onUpdateStatus(v.id, 'on_delivery', 'Customer Dispatch')}
-                      className={`px-2 py-1 rounded text-[10px] font-bold transition ${
-                        isOnDeliv ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      onClick={() => onUpdateStatus(v.id, 'on_delivery', v.current_destination || 'In Transit')}
+                      className={`px-2 py-0.5 rounded text-[10px] font-semibold transition ${
+                        isOnDeliv ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-blue-50'
                       }`}
                     >
                       Dispatch
                     </button>
                     <button
                       onClick={() => onUpdateStatus(v.id, 'maintenance', 'Service Center')}
-                      className={`px-2 py-1 rounded text-[10px] font-bold transition ${
-                        !isAvail && !isOnDeliv ? 'bg-amber-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      className={`px-2 py-0.5 rounded text-[10px] font-semibold transition ${
+                        !isAvail && !isOnDeliv ? 'bg-amber-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-amber-50'
                       }`}
                     >
                       Service
@@ -248,28 +334,32 @@ export default function VehicleManagement({ vehicles, onAddVehicle, onUpdateStat
         )}
       </div>
 
-      {/* Add Vehicle Modal */}
+      {/* Add New Vehicle Modal */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-md p-6 space-y-4">
-            <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-              <Truck className="w-5 h-5 text-brand-600" /> Register New Fleet Vehicle (Module 3)
-            </h3>
+          <div className="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-lg p-6 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <Truck className="w-5 h-5 text-brand-600" /> Register New Vehicle
+              </h3>
+              <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
             <form onSubmit={handleCreateSubmit} className="space-y-3.5">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Registration Plate Number *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. MH-12-SG-8842"
-                  value={vehicleNumber}
-                  onChange={(e) => setVehicleNumber(e.target.value)}
-                  className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg uppercase font-mono focus:outline-none"
-                />
-              </div>
-
               <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Vehicle Registration No *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. GJ-12-SG-8842"
+                    value={vehicleNumber}
+                    onChange={(e) => setVehicleNumber(e.target.value)}
+                    className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:outline-none uppercase font-mono"
+                  />
+                </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Vehicle Type</label>
                   <select
@@ -277,23 +367,12 @@ export default function VehicleManagement({ vehicles, onAddVehicle, onUpdateStat
                     onChange={(e) => setVehicleType(e.target.value)}
                     className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg bg-white"
                   >
-                    <option value="Truck">Truck (Heavy / 14ft+)</option>
-                    <option value="Tata Ace Mini Van">Tata Ace / Mini Van</option>
-                    <option value="Mahindra Bolero Pickup">Bolero Pickup</option>
-                    <option value="Container Trailer">Container Trailer</option>
-                    <option value="Tempo">Tempo / Delivery Van</option>
+                    <option value="Eicher 14ft Truck">Eicher 14ft Truck</option>
+                    <option value="Tata Ace Mini Van">Tata Ace Mini Van</option>
+                    <option value="Mahindra Bolero Pickup">Mahindra Bolero Pickup</option>
+                    <option value="20ft Heavy Flatbed">20ft Heavy Flatbed</option>
+                    <option value="Trailer 40ft (Logs)">Trailer 40ft (Timber Logs)</option>
                   </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Payload Capacity (kg)</label>
-                  <input
-                    type="number"
-                    step="any"
-                    placeholder="2500"
-                    value={capacityKg}
-                    onChange={(e) => setCapacityKg(e.target.value)}
-                    className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:outline-none"
-                  />
                 </div>
               </div>
 
@@ -302,7 +381,7 @@ export default function VehicleManagement({ vehicles, onAddVehicle, onUpdateStat
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Assigned Driver Name</label>
                   <input
                     type="text"
-                    placeholder="Driver Name"
+                    placeholder="e.g. Ramesh Jadhav"
                     value={driverName}
                     onChange={(e) => setDriverName(e.target.value)}
                     className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:outline-none"
@@ -311,24 +390,35 @@ export default function VehicleManagement({ vehicles, onAddVehicle, onUpdateStat
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Driver Phone Number</label>
                   <input
-                    type="text"
+                    type="tel"
                     placeholder="+91-9876543210"
                     value={driverPhone}
                     onChange={(e) => setDriverPhone(e.target.value)}
-                    className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:outline-none"
+                    className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:outline-none font-mono"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Vehicle Notes / Insurance Expiry</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Payload Capacity (kg)</label>
                 <input
-                  type="text"
-                  placeholder="Insurance valid till Dec 2027, FASTag active"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
+                  type="number"
+                  placeholder="2000"
+                  value={capacityKg}
+                  onChange={(e) => setCapacityKg(e.target.value)}
                   className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:outline-none"
                 />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Vehicle Notes / Route Info</label>
+                <textarea
+                  rows="2"
+                  placeholder="Insurance validity, regular route, fitness certificate..."
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  className="w-full text-xs p-2.5 border border-slate-300 rounded-lg focus:outline-none"
+                ></textarea>
               </div>
 
               <div className="flex justify-end space-x-2 pt-3 border-t border-slate-200">
@@ -341,9 +431,135 @@ export default function VehicleManagement({ vehicles, onAddVehicle, onUpdateStat
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 rounded-lg shadow-sm"
+                  className="px-4 py-2 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-lg shadow-sm"
                 >
-                  Register Vehicle
+                  Save Vehicle
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT VEHICLE MODAL */}
+      {editingVehicle && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-lg p-6 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <Pencil className="w-5 h-5 text-amber-600" /> Edit Vehicle Details
+              </h3>
+              <button onClick={() => setEditingVehicle(null)} className="text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSubmit} className="space-y-3.5">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Vehicle Registration No *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editNumber}
+                    onChange={(e) => setEditNumber(e.target.value)}
+                    className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg font-mono uppercase font-bold"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Vehicle Type</label>
+                  <select
+                    value={editType}
+                    onChange={(e) => setEditType(e.target.value)}
+                    className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg bg-white"
+                  >
+                    <option value="Eicher 14ft Truck">Eicher 14ft Truck</option>
+                    <option value="Tata Ace Mini Van">Tata Ace Mini Van</option>
+                    <option value="Mahindra Bolero Pickup">Mahindra Bolero Pickup</option>
+                    <option value="20ft Heavy Flatbed">20ft Heavy Flatbed</option>
+                    <option value="Trailer 40ft (Logs)">Trailer 40ft (Timber Logs)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Driver Name</label>
+                  <input
+                    type="text"
+                    value={editDriver}
+                    onChange={(e) => setEditDriver(e.target.value)}
+                    className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Driver Phone</label>
+                  <input
+                    type="tel"
+                    value={editPhone}
+                    onChange={(e) => setEditPhone(e.target.value)}
+                    className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Capacity (kg)</label>
+                  <input
+                    type="number"
+                    value={editCapacity}
+                    onChange={(e) => setEditCapacity(e.target.value)}
+                    className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Current Status</label>
+                  <select
+                    value={editStatus}
+                    onChange={(e) => setEditStatus(e.target.value)}
+                    className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg bg-white"
+                  >
+                    <option value="available">Available</option>
+                    <option value="on_delivery">On Delivery</option>
+                    <option value="maintenance">Maintenance</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Current Destination / Route</label>
+                <input
+                  type="text"
+                  value={editDestination}
+                  onChange={(e) => setEditDestination(e.target.value)}
+                  className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Notes</label>
+                <textarea
+                  rows="2"
+                  value={editNotes}
+                  onChange={(e) => setEditNotes(e.target.value)}
+                  className="w-full text-xs p-2.5 border border-slate-300 rounded-lg"
+                ></textarea>
+              </div>
+
+              <div className="flex justify-end space-x-2 pt-3 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setEditingVehicle(null)}
+                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-lg shadow-sm"
+                >
+                  Update Vehicle
                 </button>
               </div>
             </form>

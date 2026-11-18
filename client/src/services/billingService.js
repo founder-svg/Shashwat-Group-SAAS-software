@@ -262,5 +262,43 @@ export const billingService = {
       .single();
 
     return { data, error };
+  },
+
+  async updateInvoice(invoiceId, updates) {
+    if (!isConfigured) {
+      const invoices = getCachedInvoices();
+      const idx = invoices.findIndex(i => i.id === invoiceId);
+      if (idx !== -1) {
+        invoices[idx] = { ...invoices[idx], ...updates, updated_at: new Date().toISOString() };
+        saveCachedInvoices(invoices);
+        return { data: invoices[idx], error: null };
+      }
+      return { error: { message: 'Invoice not found' } };
+    }
+
+    const { data, error } = await supabase
+      .from('invoices')
+      .update({ ...updates, updated_at: new Date() })
+      .eq('id', invoiceId)
+      .select()
+      .single();
+    return { data, error };
+  },
+
+  async deleteInvoice(invoiceId) {
+    if (!isConfigured) {
+      let invoices = getCachedInvoices();
+      invoices = invoices.filter(i => i.id !== invoiceId);
+      saveCachedInvoices(invoices);
+      return { data: { success: true }, error: null };
+    }
+
+    // Delete related line items first, then invoice
+    await supabase.from('invoice_items').delete().eq('invoice_id', invoiceId);
+    const { data, error } = await supabase
+      .from('invoices')
+      .delete()
+      .eq('id', invoiceId);
+    return { data, error };
   }
 };

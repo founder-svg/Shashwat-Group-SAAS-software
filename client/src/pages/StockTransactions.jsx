@@ -5,10 +5,11 @@ import {
   ArrowUpRight, 
   Search, 
   FileText,
-  HardDrive
+  HardDrive,
+  Trash2
 } from 'lucide-react';
 
-export default function StockTransactions({ transactions }) {
+export default function StockTransactions({ transactions = [], onDeleteTransaction }) {
   const [filterType, setFilterType] = useState('ALL');
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -21,6 +22,14 @@ export default function StockTransactions({ transactions }) {
     return matchesSearch && matchesType;
   });
 
+  const handleDeleteClick = (t) => {
+    if (confirm(`Delete stock log record #${t.reference_number} (${t.transaction_type} for ${t.item_name})?`)) {
+      if (onDeleteTransaction) {
+        onDeleteTransaction(t.id);
+      }
+    }
+  };
+
   return (
     <div className="space-y-5">
       <div>
@@ -28,7 +37,7 @@ export default function StockTransactions({ transactions }) {
           <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-brand-100 text-brand-800">
             MODULE 7
           </span>
-          <h2 className="text-xl font-bold text-slate-900 tracking-tight">History (Stock Movement & Activity Audit)</h2>
+          <h2 className="text-xl font-bold text-slate-900 tracking-tight">History (Stock Movement &amp; Activity Audit)</h2>
         </div>
         <p className="text-xs text-slate-500 mt-0.5">
           Permanent history of all inward warehouse receipts (Stock In), outward dispatches (Stock Out), and inventory audits.
@@ -36,7 +45,7 @@ export default function StockTransactions({ transactions }) {
       </div>
 
       {/* Filter and Search */}
-      <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row justify-between items-center gap-3">
+      <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs flex flex-col sm:flex-row justify-between items-center gap-3">
         <div className="relative w-full sm:w-72">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
           <input
@@ -44,7 +53,7 @@ export default function StockTransactions({ transactions }) {
             placeholder="Search item, party, or ref number..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full text-xs pl-9 pr-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500"
+            className="w-full text-xs pl-9 pr-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
           />
         </div>
 
@@ -55,7 +64,7 @@ export default function StockTransactions({ transactions }) {
               onClick={() => setFilterType(t)}
               className={`px-3 py-1.5 rounded-lg font-semibold transition ${
                 filterType === t
-                  ? 'bg-slate-900 text-white'
+                  ? 'bg-slate-900 text-white shadow-xs'
                   : 'text-slate-600 hover:bg-slate-100'
               }`}
             >
@@ -66,25 +75,26 @@ export default function StockTransactions({ transactions }) {
       </div>
 
       {/* Transactions Table */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs text-slate-700">
             <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[11px]">
               <tr>
                 <th className="py-3 px-4">Type</th>
                 <th className="py-3 px-4">Item Name</th>
-                <th className="py-3 px-4">Quantity Moved</th>
-                <th className="py-3 px-4">Balance After</th>
+                <th className="py-3 px-4 text-center">Quantity Moved</th>
+                <th className="py-3 px-4 text-center">Balance After</th>
                 <th className="py-3 px-4">Reference No</th>
                 <th className="py-3 px-4">Party (Supplier / Customer)</th>
-                <th className="py-3 px-4">Date & Time</th>
+                <th className="py-3 px-4">Date &amp; Time</th>
                 <th className="py-3 px-4 text-center">Cloud Voucher</th>
+                <th className="py-3 px-4 text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="py-8 text-center text-slate-400">
+                  <td colSpan="9" className="py-8 text-center text-slate-400">
                     No movement records found.
                   </td>
                 </tr>
@@ -101,29 +111,41 @@ export default function StockTransactions({ transactions }) {
                           {isStockIn ? 'STOCK IN' : 'STOCK OUT'}
                         </span>
                       </td>
-                      <td className="py-3.5 px-4 font-semibold text-slate-900">
-                        {t.item_name}
+                      <td className="py-3.5 px-4 font-bold text-slate-900">
+                        {t.item_name || t.inventory_items?.name || 'Wood Item'}
                       </td>
-                      <td className={`py-3.5 px-4 font-bold ${isStockIn ? 'text-emerald-700' : 'text-rose-700'}`}>
-                        {isStockIn ? '+' : '-'}{t.quantity} {t.unit}
+                      <td className="py-3.5 px-4 text-center font-mono font-bold">
+                        <span className={isStockIn ? 'text-emerald-700' : 'text-rose-700'}>
+                          {isStockIn ? '+' : '-'}{t.quantity} {t.unit || 'CFT'}
+                        </span>
                       </td>
-                      <td className="py-3.5 px-4 font-bold text-slate-800">
-                        {t.balance_after} {t.unit}
+                      <td className="py-3.5 px-4 text-center font-mono font-bold text-slate-800">
+                        {t.balance_after} {t.unit || 'CFT'}
                       </td>
-                      <td className="py-3.5 px-4 font-mono text-slate-600">
-                        {t.reference_number || 'N/A'}
+                      <td className="py-3.5 px-4 font-mono font-semibold text-brand-700">
+                        {t.reference_number || '-'}
                       </td>
-                      <td className="py-3.5 px-4 text-slate-700">
-                        {t.party_name}
+                      <td className="py-3.5 px-4 font-medium text-slate-700">
+                        {t.party_name || 'Direct'}
                       </td>
-                      <td className="py-3.5 px-4 text-slate-400">
-                        {t.created_at || 'Today'}
+                      <td className="py-3.5 px-4 text-slate-500 text-[11px]">
+                        {t.transaction_date ? String(t.transaction_date).slice(0, 16).replace('T', ' ') : 'Recent'}
                       </td>
                       <td className="py-3.5 px-4 text-center">
-                        <span className="inline-flex items-center gap-1 text-[10px] font-mono text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                        <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
                           <HardDrive className="w-3 h-3" />
-                          {t.voucher_size_kb || 3.8} KB
+                          {t.voucher_size_kb || 3.4} KB
                         </span>
+                      </td>
+                      <td className="py-3.5 px-4 text-center">
+                        <button
+                          onClick={() => handleDeleteClick(t)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 transition"
+                          title="Delete Transaction Log"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Delete</span>
+                        </button>
                       </td>
                     </tr>
                   );

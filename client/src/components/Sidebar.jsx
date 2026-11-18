@@ -104,16 +104,27 @@ export default function Sidebar({ activeTab, setActiveTab }) {
           </div>
 
           <div className="flex items-center space-x-2.5">
-            {/* Custom Wixfox Fox/Tech Vector Badge */}
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-600 via-orange-500 to-amber-400 flex items-center justify-center text-white shadow-md shadow-orange-950/40 shrink-0 ring-1 ring-white/20">
-              <span className="font-black text-sm tracking-tighter text-slate-950">
-                W<span className="text-white">F</span>
-              </span>
+            {/* Official Wixfox Logo from www.wixfox.com */}
+            <div className="relative w-10 h-10 rounded-xl bg-gradient-to-br from-[#FF6B00] to-[#1A6FD4] p-0.5 shadow-md shadow-orange-500/30 shrink-0 ring-1 ring-white/20 flex items-center justify-center">
+              <img
+                src="/wixfox-logo.svg"
+                alt="Wixfox Technologies"
+                className="w-full h-full object-contain rounded-xl"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                  const fallback = e.currentTarget.parentElement?.querySelector('.wixfox-fallback');
+                  if (fallback) fallback.classList.remove('hidden');
+                }}
+              />
+              <div className="wixfox-fallback hidden w-full h-full flex items-center justify-center text-lg">
+                🦊
+              </div>
             </div>
 
             <div className="overflow-hidden">
-              <h3 className="text-xs font-black text-white group-hover:text-amber-300 transition tracking-tight truncate">
-                WIXFOX TECHNOLOGIES
+              <h3 className="text-xs font-black text-white group-hover:text-amber-300 transition tracking-tight truncate flex items-center gap-1">
+                <span>Wix<span className="text-[#FF6B00]">Fox</span></span>
+                <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Technologies</span>
               </h3>
               <p className="text-[10px] text-amber-400/90 font-mono font-medium truncate">
                 www.wixfox.com

@@ -1,6 +1,16 @@
 import React, { useState, useEffect } from 'react';
+import { 
+  LayoutDashboard, 
+  Package, 
+  Truck, 
+  Receipt, 
+  Boxes, 
+  Database, 
+  History 
+} from 'lucide-react';
 import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
+import LiquidNavbar from './components/ui/liquid-glass-navbar';
 import Dashboard from './pages/Dashboard';
 import ProductManagement from './pages/ProductManagement';
 import VehicleManagement from './pages/VehicleManagement';
@@ -44,6 +54,16 @@ const ensureFreshFirmLogo = (firm) => {
   const freshDef = isAshapura ? FIRMS.SHASHWAT_ASHAPURA_WOODS : FIRMS.SHASHWAT_WOODS;
   return { ...freshDef, ...firm, logo: freshDef.logo };
 };
+
+const MODULE_NAV_ITEMS = [
+  { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-4 h-4 text-amber-400" />, fx: 'glow' },
+  { id: 'products', label: 'Products', icon: <Package className="w-4 h-4 text-emerald-400" />, fx: 'pop' },
+  { id: 'vehicles', label: 'Vehicles', icon: <Truck className="w-4 h-4 text-blue-400" />, fx: 'plane' },
+  { id: 'billing', label: 'Billing', icon: <Receipt className="w-4 h-4 text-amber-300" />, fx: 'drop' },
+  { id: 'inventory', label: 'Inventory', icon: <Boxes className="w-4 h-4 text-emerald-300" />, fx: 'spin' },
+  { id: 'data', label: 'DATA', icon: <Database className="w-4 h-4 text-indigo-400" />, fx: 'wave' },
+  { id: 'history', label: 'History Vault', icon: <History className="w-4 h-4 text-rose-400" />, fx: 'drop' },
+];
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -466,6 +486,19 @@ export default function App() {
         onLogout={handleLogout}
         onFactoryReset={handleFactoryReset}
       />
+
+      {/* Top Liquid Glass Module Waterline Bar */}
+      <div className="bg-slate-950 border-b border-slate-800 px-4 py-2 flex items-center justify-center overflow-x-auto shadow-md no-print sticky top-[65px] z-20">
+        <LiquidNavbar
+          tone="dark"
+          sound={false}
+          active={MODULE_NAV_ITEMS.findIndex(m => m.id === activeTab)}
+          onChange={(idx) => {
+            if (MODULE_NAV_ITEMS[idx]) setActiveTab(MODULE_NAV_ITEMS[idx].id);
+          }}
+          items={MODULE_NAV_ITEMS}
+        />
+      </div>
 
       <div className="flex-1 flex">
         {/* Left Sidebar Navigation & Wixfox Branding */}

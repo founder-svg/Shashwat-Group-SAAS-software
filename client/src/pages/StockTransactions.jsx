@@ -25,6 +25,7 @@ import {
 import { clientMicroPdf } from '../utils/microPdfGenerator';
 import WhatsAppModal from '../components/WhatsAppModal';
 import GlassFolder from '../components/ui/glass-folder-cards';
+import LiquidNavbar from '../components/ui/liquid-glass-navbar';
 
 export default function StockTransactions({ 
   firm, 
@@ -542,86 +543,24 @@ export default function StockTransactions({
 
       {/* Main Tabs Navigation & Filter Controls */}
       <div className="bg-white p-2.5 rounded-2xl border border-slate-200 shadow-xs flex flex-wrap items-center justify-between gap-3 no-print">
-        {/* Tab Buttons */}
-        <div className="flex items-center flex-wrap gap-1">
-          <button
-            type="button"
-            onClick={() => setActiveTab('ALL')}
-            className={`px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-              activeTab === 'ALL'
-                ? 'bg-slate-900 text-white shadow-md'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-            }`}
-          >
-            <span>📋 All Activities</span>
-            <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-white/20 font-mono">
-              {unifiedTimeline.length}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('BILLS')}
-            className={`px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-              activeTab === 'BILLS'
-                ? 'bg-amber-500 text-slate-950 shadow-md font-black'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-            }`}
-          >
-            <Receipt className="w-3.5 h-3.5" />
-            <span>Bills &amp; Invoices</span>
-            <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-900/10 font-mono">
-              {filteredInvoices.length}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('STOCK_IN')}
-            className={`px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-              activeTab === 'STOCK_IN'
-                ? 'bg-emerald-600 text-white shadow-md'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-            }`}
-          >
-            <ArrowDownRight className="w-3.5 h-3.5" />
-            <span>Stock In (Input)</span>
-            <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-white/20 font-mono">
-              {stockInList.length}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('STOCK_OUT')}
-            className={`px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-              activeTab === 'STOCK_OUT'
-                ? 'bg-rose-600 text-white shadow-md'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-            }`}
-          >
-            <ArrowUpRight className="w-3.5 h-3.5" />
-            <span>Stock Out (Output)</span>
-            <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-white/20 font-mono">
-              {stockOutList.length}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('VEHICLES')}
-            className={`px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-              activeTab === 'VEHICLES'
-                ? 'bg-blue-600 text-white shadow-md'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-            }`}
-          >
-            <Truck className="w-3.5 h-3.5" />
-            <span>Vehicles &amp; Trips</span>
-            <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-white/20 font-mono">
-              {filteredVehicles.length}
-            </span>
-          </button>
+        {/* Liquid Glass Navbar for History Tabs */}
+        <div className="overflow-x-auto py-1">
+          <LiquidNavbar
+            tone="light"
+            sound={false}
+            active={['ALL', 'BILLS', 'STOCK_IN', 'STOCK_OUT', 'VEHICLES'].indexOf(activeTab)}
+            onChange={(idx) => {
+              const tabs = ['ALL', 'BILLS', 'STOCK_IN', 'STOCK_OUT', 'VEHICLES'];
+              if (tabs[idx]) setActiveTab(tabs[idx]);
+            }}
+            items={[
+              { label: `All Activities (${unifiedTimeline.length})`, icon: <FileSpreadsheet className="w-3.5 h-3.5 text-slate-700" />, fx: 'glow' },
+              { label: `Bills & Invoices (${filteredInvoices.length})`, icon: <Receipt className="w-3.5 h-3.5 text-amber-600" />, fx: 'drop' },
+              { label: `Stock In (${stockInList.length})`, icon: <ArrowDownRight className="w-3.5 h-3.5 text-emerald-600" />, fx: 'pop' },
+              { label: `Stock Out (${stockOutList.length})`, icon: <ArrowUpRight className="w-3.5 h-3.5 text-rose-600" />, fx: 'plane' },
+              { label: `Vehicles & Trips (${filteredVehicles.length})`, icon: <Truck className="w-3.5 h-3.5 text-blue-600" />, fx: 'wave' },
+            ]}
+          />
         </div>
 
         {/* Date Filter Quick Pills & Choose Date Picker */}

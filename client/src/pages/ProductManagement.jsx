@@ -30,6 +30,7 @@ import {
 } from '../utils/woodCalculator';
 import { moduleWhatsApp } from '../utils/moduleWhatsAppSharer';
 import WhatsAppModal from '../components/WhatsAppModal';
+import LiquidNavbar from '../components/ui/liquid-glass-navbar';
 
 export default function ProductManagement({ firm, inventory = [], onAddItem, onUpdateItem, onDeleteItem }) {
   // Determine if active firm is Shashwat Ashapura Woods (deals in Woods + Plywoods) or Shashwat Woods (strictly Woods)
@@ -512,72 +513,33 @@ export default function ProductManagement({ firm, inventory = [], onAddItem, onU
           />
         </div>
 
-        {/* Dynamic Filter Buttons based on Firm */}
-        <div className="flex items-center space-x-1 text-xs w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
-          <button
-            onClick={() => setFilterTab('ALL')}
-            className={`px-3 py-1.5 rounded-lg font-bold transition whitespace-nowrap ${
-              filterTab === 'ALL' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            All Items
-          </button>
-
-          {isAshapura ? (
-            <>
-              <button
-                onClick={() => setFilterTab('PLYWOOD')}
-                className={`px-3 py-1.5 rounded-lg font-bold transition whitespace-nowrap ${
-                  filterTab === 'PLYWOOD' ? 'bg-amber-800 text-amber-100' : 'text-slate-600 hover:bg-slate-100'
-                }`}
-              >
-                🪵 Plywoods &amp; Sheets
-              </button>
-              <button
-                onClick={() => setFilterTab('WOOD')}
-                className={`px-3 py-1.5 rounded-lg font-bold transition whitespace-nowrap ${
-                  filterTab === 'WOOD' ? 'bg-emerald-800 text-emerald-100' : 'text-slate-600 hover:bg-slate-100'
-                }`}
-              >
-                🌲 Wood &amp; Timber
-              </button>
-              <button
-                onClick={() => setFilterTab('BWP')}
-                className={`px-3 py-1.5 rounded-lg font-bold transition whitespace-nowrap ${
-                  filterTab === 'BWP' ? 'bg-blue-800 text-blue-100' : 'text-slate-600 hover:bg-slate-100'
-                }`}
-              >
-                Marine BWP (710)
-              </button>
-              <button
-                onClick={() => setFilterTab('DOOR')}
-                className={`px-3 py-1.5 rounded-lg font-bold transition whitespace-nowrap ${
-                  filterTab === 'DOOR' ? 'bg-indigo-800 text-indigo-100' : 'text-slate-600 hover:bg-slate-100'
-                }`}
-              >
-                Doors &amp; Blockboard
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                onClick={() => setFilterTab('TEAK')}
-                className={`px-3 py-1.5 rounded-lg font-bold transition whitespace-nowrap ${
-                  filterTab === 'TEAK' ? 'bg-amber-800 text-amber-100' : 'text-slate-600 hover:bg-slate-100'
-                }`}
-              >
-                Teak Wood
-              </button>
-              <button
-                onClick={() => setFilterTab('PINE')}
-                className={`px-3 py-1.5 rounded-lg font-bold transition whitespace-nowrap ${
-                  filterTab === 'PINE' ? 'bg-emerald-800 text-emerald-100' : 'text-slate-600 hover:bg-slate-100'
-                }`}
-              >
-                Pine Wood
-              </button>
-            </>
-          )}
+        {/* Dynamic Liquid Glass Filter Tabs based on Firm */}
+        <div className="overflow-x-auto py-1">
+          {(() => {
+            const tabs = isAshapura ? [
+              { id: 'ALL', label: 'All Items', fx: 'glow' },
+              { id: 'PLYWOOD', label: '🪵 Plywoods & Sheets', fx: 'drop' },
+              { id: 'WOOD', label: '🌲 Wood & Timber', fx: 'pop' },
+              { id: 'BWP', label: 'Marine BWP (710)', fx: 'plane' },
+              { id: 'DOOR', label: 'Doors & Boards', fx: 'wave' },
+            ] : [
+              { id: 'ALL', label: 'All Timber', fx: 'glow' },
+              { id: 'TEAK', label: 'Teak Wood', fx: 'drop' },
+              { id: 'PINE', label: 'Pine Wood', fx: 'pop' },
+            ];
+            const activeIdx = Math.max(0, tabs.findIndex(t => t.id === filterTab));
+            return (
+              <LiquidNavbar
+                tone="light"
+                sound={false}
+                active={activeIdx}
+                onChange={(idx) => {
+                  if (tabs[idx]) setFilterTab(tabs[idx].id);
+                }}
+                items={tabs}
+              />
+            );
+          })()}
         </div>
       </div>
 

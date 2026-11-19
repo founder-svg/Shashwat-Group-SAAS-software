@@ -20,6 +20,7 @@ import {
 import { calculateCft, isPlywoodItem } from '../utils/woodCalculator';
 import StockSheetModal from '../components/StockSheetModal';
 import WhatsAppModal from '../components/WhatsAppModal';
+import LiquidNavbar from '../components/ui/liquid-glass-navbar';
 
 export default function Inventory({ 
   firm,
@@ -242,19 +243,19 @@ export default function Inventory({
           />
         </div>
 
-        <div className="flex items-center space-x-1 text-xs w-full sm:w-auto overflow-x-auto">
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setCategoryFilter(cat)}
-              className={`px-3 py-1.5 rounded-lg font-semibold transition cursor-pointer ${categoryFilter === cat
-                ? 'bg-brand-600 text-white'
-                : 'text-slate-600 hover:bg-slate-100'
-                }`}
-            >
-              {cat}
-            </button>
-          ))}
+        <div className="overflow-x-auto py-1">
+          <LiquidNavbar
+            tone="light"
+            sound={false}
+            active={categories.indexOf(categoryFilter)}
+            onChange={(idx) => {
+              if (categories[idx]) setCategoryFilter(categories[idx]);
+            }}
+            items={categories.map((cat, i) => ({
+              label: cat,
+              fx: i % 2 === 0 ? 'drop' : 'pop'
+            }))}
+          />
         </div>
       </div>
 

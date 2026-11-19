@@ -12,6 +12,7 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import { FIRMS } from '../constants/firms';
+import { SHASHWAT_WOODS_LOGO, SHASHWAT_ASHAPURA_WOODS_LOGO } from '../constants/firmLogos';
 
 export default function FirmSelectionScreen({ 
   user = null,
@@ -124,8 +125,11 @@ export default function FirmSelectionScreen({
                 {/* Firm Logo Container */}
                 <div className="w-full h-44 sm:h-52 rounded-2xl bg-white/5 border border-slate-800/80 p-3 flex items-center justify-center overflow-hidden mb-6 group-hover:border-slate-700 transition">
                   <img
-                    src={firm.logo}
+                    src={firm.logo || (firm.id === 'shashwat_ashapura_woods' ? SHASHWAT_ASHAPURA_WOODS_LOGO : SHASHWAT_WOODS_LOGO)}
                     alt={firm.name}
+                    onError={(e) => {
+                      e.currentTarget.src = firm.id === 'shashwat_ashapura_woods' ? SHASHWAT_ASHAPURA_WOODS_LOGO : SHASHWAT_WOODS_LOGO;
+                    }}
                     className="max-h-full max-w-full object-contain rounded-xl shadow-md transition-transform duration-300 group-hover:scale-105"
                   />
                 </div>

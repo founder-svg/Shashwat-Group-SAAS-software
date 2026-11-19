@@ -28,7 +28,7 @@ import { driveService } from './services/driveService';
 import { vehicleService } from './services/vehicleService';
 
 // One-time auto purge of legacy demo cache keys across client browsers
-const SYSTEM_CACHE_VERSION = 'shashwat_v8_purge_patel';
+const SYSTEM_CACHE_VERSION = 'shashwat_v9_logo_sync';
 if (typeof window !== 'undefined' && localStorage.getItem('shashwat_system_version') !== SYSTEM_CACHE_VERSION) {
   localStorage.removeItem('shashwat_invoices_cache');
   localStorage.removeItem('shashwat_inventory_cache');
@@ -38,14 +38,21 @@ if (typeof window !== 'undefined' && localStorage.getItem('shashwat_system_versi
   localStorage.setItem('shashwat_system_version', SYSTEM_CACHE_VERSION);
 }
 
+const ensureFreshFirmLogo = (firm) => {
+  if (!firm) return null;
+  const isAshapura = firm.id === 'shashwat_ashapura_woods' || firm.name?.toLowerCase().includes('ashapura');
+  const freshDef = isAshapura ? FIRMS.SHASHWAT_ASHAPURA_WOODS : FIRMS.SHASHWAT_WOODS;
+  return { ...freshDef, ...firm, logo: freshDef.logo };
+};
+
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   
-  // Layer 1 & 2 Auth & Firm States
+  // Layer 1 & 2 Auth & Firm States with Guaranteed Fresh Embedded Logos
   const [selectedFirm, setSelectedFirm] = useState(() => {
     try {
       const stored = localStorage.getItem('shashwat_firm');
-      return stored ? JSON.parse(stored) : null;
+      return stored ? ensureFreshFirmLogo(JSON.parse(stored)) : null;
     } catch (e) {
       return null;
     }
@@ -54,7 +61,7 @@ export default function App() {
   const [lastFirm, setLastFirm] = useState(() => {
     try {
       const stored = localStorage.getItem('shashwat_last_firm') || localStorage.getItem('shashwat_firm');
-      return stored ? JSON.parse(stored) : FIRMS.SHASHWAT_WOODS;
+      return stored ? ensureFreshFirmLogo(JSON.parse(stored)) : FIRMS.SHASHWAT_WOODS;
     } catch (e) {
       return FIRMS.SHASHWAT_WOODS;
     }
@@ -145,15 +152,16 @@ export default function App() {
 
   // Auth Flow Handlers
   const handleSelectFirm = (firm) => {
-    setSelectedFirm(firm);
-    setLastFirm(firm);
-    localStorage.setItem('shashwat_firm', JSON.stringify(firm));
-    localStorage.setItem('shashwat_last_firm', JSON.stringify(firm));
+    const fresh = ensureFreshFirmLogo(firm);
+    setSelectedFirm(fresh);
+    setLastFirm(fresh);
+    localStorage.setItem('shashwat_firm', JSON.stringify(fresh));
+    localStorage.setItem('shashwat_last_firm', JSON.stringify(fresh));
   };
 
   const handleBackToAuth = (mode = 'login') => {
     setAuthInitialMode(mode);
-    const targetFirm = lastFirm || FIRMS.SHASHWAT_WOODS;
+    const targetFirm = ensureFreshFirmLogo(lastFirm || FIRMS.SHASHWAT_WOODS);
     setSelectedFirm(targetFirm);
     if (user) {
       setUser(null);
@@ -162,10 +170,11 @@ export default function App() {
   };
 
   const handleLoginSuccess = (authenticatedUser, firm) => {
+    const fresh = ensureFreshFirmLogo(firm);
     setUser(authenticatedUser);
-    setSelectedFirm(firm);
+    setSelectedFirm(fresh);
     localStorage.setItem('shashwat_user', JSON.stringify(authenticatedUser));
-    localStorage.setItem('shashwat_firm', JSON.stringify(firm));
+    localStorage.setItem('shashwat_firm', JSON.stringify(fresh));
   };
 
   const handleSwitchFirm = () => {

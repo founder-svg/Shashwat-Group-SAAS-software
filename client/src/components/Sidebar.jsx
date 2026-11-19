@@ -11,6 +11,7 @@ import {
   ExternalLink,
   Sparkles
 } from 'lucide-react';
+import { SHASHWAT_WOODS_LOGO, SHASHWAT_ASHAPURA_WOODS_LOGO } from '../constants/firmLogos';
 
 export default function Sidebar({ activeTab, setActiveTab, firm }) {
   const modules = [
@@ -29,19 +30,16 @@ export default function Sidebar({ activeTab, setActiveTab, firm }) {
         {/* Top Left: Active Division / Firm Branding */}
         <div className="p-4 border-b border-slate-800/80 bg-slate-950/40">
           <div className="flex items-center space-x-3">
-            {firm?.logo ? (
-              <div className="w-10 h-10 rounded-xl bg-white/5 border border-slate-700/80 p-1 flex items-center justify-center shrink-0 overflow-hidden shadow-sm">
-                <img
-                  src={firm.logo}
-                  alt={firm.name}
-                  className="max-h-full max-w-full object-contain rounded-lg"
-                />
-              </div>
-            ) : (
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white shadow-md shadow-brand-900/30 ring-1 ring-white/10 shrink-0">
-                <Building2 className="w-5 h-5 text-white" />
-              </div>
-            )}
+            <div className="w-10 h-10 rounded-xl bg-white/5 border border-slate-700/80 p-1 flex items-center justify-center shrink-0 overflow-hidden shadow-sm">
+              <img
+                src={firm?.logo || (firm?.id === 'shashwat_ashapura_woods' ? SHASHWAT_ASHAPURA_WOODS_LOGO : SHASHWAT_WOODS_LOGO)}
+                alt={firm?.name || 'Firm Logo'}
+                onError={(e) => {
+                  e.currentTarget.src = firm?.id === 'shashwat_ashapura_woods' ? SHASHWAT_ASHAPURA_WOODS_LOGO : SHASHWAT_WOODS_LOGO;
+                }}
+                className="max-h-full max-w-full object-contain rounded-lg"
+              />
+            </div>
             <div className="overflow-hidden">
               <span className="block text-[10px] font-mono font-bold text-amber-400 tracking-wider uppercase truncate">
                 {firm?.shortName || 'SHASHWAT'} DIVISION

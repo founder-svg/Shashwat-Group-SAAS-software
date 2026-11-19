@@ -4,6 +4,7 @@ import {
   CheckCircle2, AlertCircle, Sparkles, ShieldCheck, Eye, EyeOff 
 } from 'lucide-react';
 import { supabase, isConfigured } from '../config/supabaseClient';
+import { SHASHWAT_WOODS_LOGO, SHASHWAT_ASHAPURA_WOODS_LOGO } from '../constants/firmLogos';
 
 export default function AuthScreen({ firm, onBackToFirms, onLoginSuccess, initialMode = 'login' }) {
   // Mode: 'login' | 'signup' | 'otp_signup' | 'forgot_password' | 'otp_reset'
@@ -308,8 +309,11 @@ export default function AuthScreen({ firm, onBackToFirms, onLoginSuccess, initia
           <div className="flex items-center gap-3.5 pb-4 border-b border-slate-800">
             <div className="w-14 h-14 rounded-xl bg-white/5 border border-slate-700/80 p-1.5 flex items-center justify-center shrink-0 overflow-hidden">
               <img
-                src={firm.logo}
-                alt={firm.name}
+                src={firm?.logo || (firm?.id === 'shashwat_ashapura_woods' ? SHASHWAT_ASHAPURA_WOODS_LOGO : SHASHWAT_WOODS_LOGO)}
+                alt={firm?.name || 'Firm Logo'}
+                onError={(e) => {
+                  e.currentTarget.src = firm?.id === 'shashwat_ashapura_woods' ? SHASHWAT_ASHAPURA_WOODS_LOGO : SHASHWAT_WOODS_LOGO;
+                }}
                 className="max-h-full max-w-full object-contain rounded-lg"
               />
             </div>

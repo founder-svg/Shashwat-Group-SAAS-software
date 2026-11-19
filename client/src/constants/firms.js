@@ -1,10 +1,12 @@
+import { SHASHWAT_WOODS_LOGO, SHASHWAT_ASHAPURA_WOODS_LOGO } from './firmLogos';
+
 export const FIRMS = {
   SHASHWAT_WOODS: {
     id: 'shashwat_woods',
     name: 'Shashwat Woods',
     shortName: 'SW',
     tagline: 'Specialized Timber, Sawn Wood & Log Solutions',
-    logo: '/logos/shashwat-woods.png',
+    logo: SHASHWAT_WOODS_LOGO,
     themeColor: 'emerald',
     badgeColor: 'bg-emerald-600 text-white',
     accentBorder: 'border-emerald-500',
@@ -16,7 +18,7 @@ export const FIRMS = {
     shortName: 'SAW',
     tagline: 'Engineered Plywoods, Flush Doors, Architectural Panels & Timber',
     motto: '|| नीति शतकम् ||',
-    logo: '/logos/shashwat-ashapura-woods.jpg',
+    logo: SHASHWAT_ASHAPURA_WOODS_LOGO,
     themeColor: 'amber',
     badgeColor: 'bg-amber-800 text-amber-100',
     accentBorder: 'border-amber-700',

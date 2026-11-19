@@ -1,6 +1,7 @@
 import React from 'react';
 import { Building2, Users, LogOut, RefreshCw, Shield, RotateCcw } from 'lucide-react';
 import { isConfigured } from '../config/supabaseClient';
+import { SHASHWAT_WOODS_LOGO, SHASHWAT_ASHAPURA_WOODS_LOGO } from '../constants/firmLogos';
 
 export default function Navbar({ firm, user, onSwitchFirm, onLogout, onFactoryReset }) {
   const getInitials = (name) => {
@@ -23,19 +24,16 @@ export default function Navbar({ firm, user, onSwitchFirm, onLogout, onFactoryRe
       <div className="flex items-center justify-between">
         {/* Top Left: Active Firm Branding */}
         <div className="flex items-center space-x-3">
-          {firm?.logo ? (
-            <div className="w-11 h-11 rounded-xl bg-slate-50 border border-slate-200 p-1 flex items-center justify-center shrink-0 shadow-xs overflow-hidden">
-              <img
-                src={firm.logo}
-                alt={firm.name}
-                className="max-h-full max-w-full object-contain rounded-lg"
-              />
-            </div>
-          ) : (
-            <div className="w-10 h-10 rounded-xl bg-brand-600 flex items-center justify-center text-white shadow-xs">
-              <Building2 className="w-6 h-6" />
-            </div>
-          )}
+          <div className="w-11 h-11 rounded-xl bg-slate-50 border border-slate-200 p-1 flex items-center justify-center shrink-0 shadow-xs overflow-hidden">
+            <img
+              src={firm?.logo || (firm?.id === 'shashwat_ashapura_woods' ? SHASHWAT_ASHAPURA_WOODS_LOGO : SHASHWAT_WOODS_LOGO)}
+              alt={firm?.name || 'Firm Logo'}
+              onError={(e) => {
+                e.currentTarget.src = firm?.id === 'shashwat_ashapura_woods' ? SHASHWAT_ASHAPURA_WOODS_LOGO : SHASHWAT_WOODS_LOGO;
+              }}
+              className="max-h-full max-w-full object-contain rounded-lg"
+            />
+          </div>
 
           <div>
             <div className="flex items-center gap-2">

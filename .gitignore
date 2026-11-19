@@ -23,8 +23,6 @@ cloud/storage/local_uploads/
 temp/
 
 # Build and IDE files
-dist/
-build/
 .vscode/
 .idea/
 *.swp

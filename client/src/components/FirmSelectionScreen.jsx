@@ -24,7 +24,20 @@ export default function FirmSelectionScreen({
   const firmList = Object.values(FIRMS);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white flex flex-col justify-between p-4 sm:p-8">
+    <div className="relative min-h-screen text-white flex flex-col justify-between p-4 sm:p-8 isolate overflow-hidden">
+      {/* Dynamic trade background wallpaper */}
+      <div 
+        aria-hidden="true"
+        className="fixed inset-0 -z-30 bg-cover bg-center transition-all duration-1000 transform scale-105"
+        style={{
+          backgroundImage: `url(https://images.unsplash.com/photo-1546484396-fb3fc6f95f98?auto=format&fit=crop&w=2400&q=85)`,
+          filter: 'brightness(0.45) saturate(1.1)',
+        }}
+      />
+      <div 
+        aria-hidden="true"
+        className="fixed inset-0 -z-20 bg-gradient-to-br from-slate-950/85 via-slate-950/80 to-slate-950/90 backdrop-blur-[4px] pointer-events-none"
+      />
       {/* Top Navigation Bar with Back to Login/Signup */}
       <div className="max-w-6xl mx-auto w-full pt-2 flex flex-wrap items-center justify-between gap-3">
         {/* Back to Login Button */}

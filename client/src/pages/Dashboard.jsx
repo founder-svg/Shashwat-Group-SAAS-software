@@ -87,124 +87,39 @@ export default function Dashboard({
 
   // Background asset based on firm
   const currentBgImage = isAshapura ? PLYWOOD_BG_URL : WOOD_BG_URL;
-  const firmLogo = firm?.logo || (isAshapura ? SHASHWAT_ASHAPURA_WOODS_LOGO : SHASHWAT_WOODS_LOGO);
-
   return (
-    <div className="relative min-h-[85vh] rounded-3xl overflow-hidden shadow-2xl p-4 sm:p-7 transition-all duration-700 isolate">
+    <div className="relative w-full transition-all duration-700 isolate">
       {/* ===================================================================== */}
-      {/* 1. DYNAMIC AMBIENT BACKGROUND WALLPAPER (WOOD / PLYWOOD BASED ON FIRM) */}
+      {/* COMMAND CENTER HEADER & TIMEFRAME SELECTOR */}
       {/* ===================================================================== */}
-      <div 
-        aria-hidden="true"
-        className="absolute inset-0 -z-30 bg-cover bg-center transition-all duration-1000 transform scale-105"
-        style={{
-          backgroundImage: `url(${currentBgImage})`,
-          filter: isGlowHigh ? 'brightness(0.68) saturate(1.18)' : 'brightness(0.5) saturate(1.0)',
-        }}
-      />
-
-      {/* Atmospheric Smoke Vignette & Edge Lighting */}
-      <div 
-        aria-hidden="true"
-        className={`absolute inset-0 -z-20 transition-colors duration-700 ${
-          isAshapura 
-            ? 'bg-gradient-to-br from-amber-950/75 via-slate-950/70 to-slate-950/85 backdrop-blur-[3px]'
-            : 'bg-gradient-to-br from-slate-950/80 via-emerald-950/60 to-slate-950/85 backdrop-blur-[3px]'
-        }`}
-      />
-
-      {/* Ambient Radial Spotlight Orbs */}
-      <div 
-        aria-hidden="true" 
-        className="absolute -top-24 -left-24 w-96 h-96 rounded-full bg-amber-500/15 blur-3xl pointer-events-none -z-10" 
-      />
-      <div 
-        aria-hidden="true" 
-        className="absolute top-1/2 right-10 w-96 h-96 rounded-full bg-blue-500/10 blur-3xl pointer-events-none -z-10" 
-      />
-
-      {/* ===================================================================== */}
-      {/* 2. TOP FLOATING GLASS BAR (ATLAS STYLE) */}
-      {/* ===================================================================== */}
-      <header className="relative z-10 rounded-2xl bg-white/10 dark:bg-black/35 backdrop-blur-2xl border border-white/20 shadow-[0_8px_32px_0_rgba(0,0,0,0.37)] px-4 py-3 mb-6 flex flex-col md:flex-row items-center justify-between gap-3">
-        {/* Left: Firm Avatar & Workspace Tag */}
-        <div className="flex items-center space-x-3 self-start md:self-auto">
-          <div className="w-10 h-10 rounded-xl bg-white/15 border border-white/30 p-1 flex items-center justify-center shrink-0 shadow-inner overflow-hidden">
-            <img 
-              src={firmLogo} 
-              alt={firm?.name || 'Firm Logo'} 
-              className="max-h-full max-w-full object-contain rounded-lg"
-            />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-black tracking-wider uppercase text-white drop-shadow-sm">
-                {firm?.shortName || (isAshapura ? 'ASHAPURA' : 'SHASHWAT')}
-              </span>
-              <span className="text-[10px] font-mono font-bold px-2 py-0.2 rounded-full bg-white/20 text-amber-300 border border-white/20">
-                {isAshapura ? 'Plywood Division' : 'Timber Division'}
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-300 font-medium tracking-tight">
-              Commercial Operations Suite
-            </p>
-          </div>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+        <div>
+          <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight drop-shadow-md">
+            Command Center
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-300 font-medium mt-0.5">
+            Revenue, real-time stock movements, fleet dispatches, and operational health.
+          </p>
         </div>
 
-        {/* Center: Interactive Search / Prompt Pill with Glowing Chromatic Orb */}
-        <div className="w-full md:w-auto flex-1 max-w-md mx-auto">
-          <div className="relative flex items-center rounded-full bg-black/40 hover:bg-black/50 border border-white/20 px-3.5 py-1.5 backdrop-blur-md shadow-inner transition group focus-within:ring-2 focus-within:ring-amber-400/50">
-            {/* Chromatic Iridescent Orb */}
-            <div className="relative flex items-center justify-center mr-2.5 shrink-0">
-              <span className="absolute w-5 h-5 rounded-full bg-gradient-to-tr from-purple-500 via-pink-400 to-amber-300 blur-[3px] opacity-80 animate-pulse" />
-              <span className="relative w-4 h-4 rounded-full bg-gradient-to-tr from-indigo-500 via-rose-400 to-amber-200 shadow-sm" />
-            </div>
-
-            <input
-              type="text"
-              placeholder="Show me what needs attention in billing, stock & dispatches..."
-              value={searchPrompt}
-              onChange={(e) => setSearchPrompt(e.target.value)}
-              className="w-full bg-transparent text-xs text-white placeholder:text-slate-400 focus:outline-none font-medium truncate"
-            />
-
-            <Search className="w-4 h-4 text-slate-400 ml-2 shrink-0 group-hover:text-white transition" />
-          </div>
+        {/* Timeframe Filter Pills (21st.dev Style) */}
+        <div className="flex items-center p-1 rounded-full bg-black/40 border border-white/15 backdrop-blur-md shadow-inner self-end sm:self-auto">
+          {['today', '7d', '30d', 'all'].map((tf) => (
+            <button
+              key={tf}
+              type="button"
+              onClick={() => setTimeframe(tf)}
+              className={`px-3 py-1 rounded-full text-xs font-bold transition capitalize cursor-pointer ${
+                timeframe === tf
+                  ? 'bg-white text-slate-950 shadow-md'
+                  : 'text-slate-300 hover:text-white'
+              }`}
+            >
+              {tf === '30d' ? '30 days' : tf === '7d' ? '7 days' : tf === 'today' ? 'Today' : 'All Time'}
+            </button>
+          ))}
         </div>
-
-        {/* Right: Ambient Glow Toggle, WhatsApp Summary & Notification Bell */}
-        <div className="flex items-center gap-2 self-end md:self-auto">
-          {/* Ambient Lighting Toggle */}
-          <button
-            type="button"
-            onClick={() => setIsGlowHigh(!isGlowHigh)}
-            className="p-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-slate-200 hover:text-amber-300 transition cursor-pointer"
-            title="Toggle Ambient Glass Lighting"
-          >
-            {isGlowHigh ? <Sun className="w-4 h-4 text-amber-300" /> : <Moon className="w-4 h-4 text-slate-300" />}
-          </button>
-
-          {/* WhatsApp Executive Summary */}
-          <button
-            type="button"
-            onClick={() => setShowDashboardWhatsApp(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600/80 hover:bg-emerald-500/90 text-white border border-emerald-400/30 text-xs font-bold transition shadow-md cursor-pointer backdrop-blur-md"
-            title="Send Executive PDF Report to WhatsApp"
-          >
-            <Send className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">WhatsApp Report</span>
-          </button>
-
-          {/* Notifications Bell */}
-          <div className="relative p-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-slate-200 cursor-pointer transition">
-            <Bell className="w-4 h-4" />
-            {lowStockItems.length > 0 && (
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-black animate-ping" />
-            )}
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-black" />
-          </div>
-        </div>
-      </header>
+      </div>
 
       {/* ===================================================================== */}
       {/* 3. MAIN COMMAND CENTER WITH LEFT FLOATING DOCK */}

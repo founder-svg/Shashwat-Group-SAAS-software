@@ -25,7 +25,7 @@ export default function Sidebar({ activeTab, setActiveTab, firm }) {
   ];
 
   return (
-    <aside className="w-64 bg-slate-900 text-slate-300 flex flex-col justify-between shrink-0 shadow-xl min-h-[calc(100vh-61px)] border-r border-slate-800">
+    <aside className="w-64 bg-slate-950/70 backdrop-blur-2xl text-slate-300 flex flex-col justify-between shrink-0 shadow-2xl min-h-[calc(100vh-61px)] border-r border-white/10">
       <div>
         {/* Top Left: Active Division / Firm Branding */}
         <div className="p-4 border-b border-slate-800/80 bg-slate-950/40">

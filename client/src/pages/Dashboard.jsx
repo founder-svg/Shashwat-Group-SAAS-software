@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   IndianRupee,
   Boxes,
@@ -7,10 +7,32 @@ import {
   ArrowUpRight,
   Receipt,
   PlusCircle,
-  HardDrive
+  HardDrive,
+  Truck,
+  TrendingUp,
+  Search,
+  Bell,
+  Sun,
+  Moon,
+  Sparkles,
+  Send,
+  Eye,
+  CheckCircle2,
+  Clock,
+  LayoutDashboard,
+  Layers,
+  BarChart3,
+  ChevronRight,
+  FileSpreadsheet
 } from 'lucide-react';
-import { moduleWhatsApp } from '../utils/moduleWhatsAppSharer';
+import { SHASHWAT_WOODS_LOGO, SHASHWAT_ASHAPURA_WOODS_LOGO } from '../constants/firmLogos';
 import WhatsAppModal from '../components/WhatsAppModal';
+
+// High-resolution photography tailored to each firm's trade:
+// 1. Shashwat Woods -> Architectural Sawn Timber, Hardwood Logs & Teak Planks
+const WOOD_BG_URL = "https://images.unsplash.com/photo-1546484396-fb3fc6f95f98?auto=format&fit=crop&w=2400&q=85";
+// 2. Shashwat Ashapura Woods -> Architectural Plywood Sheets, Stacked Baltic Birch & Honey Veneer Grains
+const PLYWOOD_BG_URL = "https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=2400&q=85";
 
 export default function Dashboard({
   firm,
@@ -23,201 +45,533 @@ export default function Dashboard({
   onPrintInvoice
 }) {
   const [showDashboardWhatsApp, setShowDashboardWhatsApp] = useState(false);
-  const totalBilled = invoices.reduce((acc, i) => acc + (Number(i.total_amount) || 0), 0);
-  const totalPending = invoices.reduce((acc, i) => acc + (Number(i.balance_due) || 0), 0);
+  const [timeframe, setTimeframe] = useState('30d'); // 'today' | '7d' | '30d' | 'all'
+  const [activeDock, setActiveDock] = useState('overview'); // 'overview' | 'revenue' | 'inventory' | 'fleet'
+  const [searchPrompt, setSearchPrompt] = useState('');
+  const [isGlowHigh, setIsGlowHigh] = useState(true);
+
+  // Check active firm division
+  const isAshapura = useMemo(() => {
+    return firm?.id === 'shashwat_ashapura_woods' || firm?.name?.toLowerCase().includes('ashapura');
+  }, [firm]);
+
+  // Clean invoices without legacy demo items
+  const cleanInvoices = useMemo(() => {
+    return invoices.filter(inv =>
+      inv &&
+      inv.customer_name !== 'Patel Enterprises' &&
+      inv.customer_name !== 'Patel Timber Mart' &&
+      inv.invoice_number !== 'INV-2026-001' &&
+      !['inv-1', 'inv-demo'].includes(inv.id)
+    );
+  }, [invoices]);
+
+  // Financial aggregates
+  const totalBilled = cleanInvoices.reduce((acc, i) => acc + (Number(i.total_amount) || 0), 0);
+  const totalPending = cleanInvoices.reduce((acc, i) => acc + (Number(i.balance_due) || 0), 0);
+  const totalReceived = Math.max(0, totalBilled - totalPending);
+  const avgBill = cleanInvoices.length > 0 ? (totalBilled / cleanInvoices.length) : 0;
+
+  // Inventory movements
+  const totalStockInQty = transactions
+    .filter(t => t.transaction_type === 'STOCK_IN')
+    .reduce((acc, t) => acc + (Number(t.quantity) || 0), 0);
+
+  const totalStockOutQty = transactions
+    .filter(t => t.transaction_type === 'STOCK_OUT')
+    .reduce((acc, t) => acc + (Number(t.quantity) || 0), 0);
+
   const lowStockItems = inventory.filter(i => Number(i.current_stock) <= Number(i.min_reorder_level));
+  const availableVehicles = vehicles.filter(v => v.status === 'available');
+  const onRouteVehicles = vehicles.filter(v => v.status === 'on_delivery');
+
+  // Background asset based on firm
+  const currentBgImage = isAshapura ? PLYWOOD_BG_URL : WOOD_BG_URL;
+  const firmLogo = firm?.logo || (isAshapura ? SHASHWAT_ASHAPURA_WOODS_LOGO : SHASHWAT_WOODS_LOGO);
 
   return (
-    <div className="space-y-6">
-      {/* Welcome Banner */}
-      <div className="bg-gradient-to-r from-slate-900 to-brand-800 rounded-2xl p-6 text-white shadow-md flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <div className="flex items-center space-x-2">
-            <span className="text-xs font-semibold text-slate-300">Shashwat Commercial Suite</span>
+    <div className="relative min-h-[85vh] rounded-3xl overflow-hidden shadow-2xl p-4 sm:p-7 transition-all duration-700 isolate">
+      {/* ===================================================================== */}
+      {/* 1. DYNAMIC AMBIENT BACKGROUND WALLPAPER (WOOD / PLYWOOD BASED ON FIRM) */}
+      {/* ===================================================================== */}
+      <div 
+        aria-hidden="true"
+        className="absolute inset-0 -z-30 bg-cover bg-center transition-all duration-1000 transform scale-105"
+        style={{
+          backgroundImage: `url(${currentBgImage})`,
+          filter: isGlowHigh ? 'brightness(0.68) saturate(1.18)' : 'brightness(0.5) saturate(1.0)',
+        }}
+      />
+
+      {/* Atmospheric Smoke Vignette & Edge Lighting */}
+      <div 
+        aria-hidden="true"
+        className={`absolute inset-0 -z-20 transition-colors duration-700 ${
+          isAshapura 
+            ? 'bg-gradient-to-br from-amber-950/75 via-slate-950/70 to-slate-950/85 backdrop-blur-[3px]'
+            : 'bg-gradient-to-br from-slate-950/80 via-emerald-950/60 to-slate-950/85 backdrop-blur-[3px]'
+        }`}
+      />
+
+      {/* Ambient Radial Spotlight Orbs */}
+      <div 
+        aria-hidden="true" 
+        className="absolute -top-24 -left-24 w-96 h-96 rounded-full bg-amber-500/15 blur-3xl pointer-events-none -z-10" 
+      />
+      <div 
+        aria-hidden="true" 
+        className="absolute top-1/2 right-10 w-96 h-96 rounded-full bg-blue-500/10 blur-3xl pointer-events-none -z-10" 
+      />
+
+      {/* ===================================================================== */}
+      {/* 2. TOP FLOATING GLASS BAR (ATLAS STYLE) */}
+      {/* ===================================================================== */}
+      <header className="relative z-10 rounded-2xl bg-white/10 dark:bg-black/35 backdrop-blur-2xl border border-white/20 shadow-[0_8px_32px_0_rgba(0,0,0,0.37)] px-4 py-3 mb-6 flex flex-col md:flex-row items-center justify-between gap-3">
+        {/* Left: Firm Avatar & Workspace Tag */}
+        <div className="flex items-center space-x-3 self-start md:self-auto">
+          <div className="w-10 h-10 rounded-xl bg-white/15 border border-white/30 p-1 flex items-center justify-center shrink-0 shadow-inner overflow-hidden">
+            <img 
+              src={firmLogo} 
+              alt={firm?.name || 'Firm Logo'} 
+              className="max-h-full max-w-full object-contain rounded-lg"
+            />
           </div>
-          <h2 className="text-xl font-black tracking-tight mt-1.5">
-            Command Center Dashboard
-          </h2>
-          <p className="text-xs text-slate-300 mt-1 max-w-xl">
-            Centralized management system for billing, inventory balance, vehicle logistics, and archived records.
-          </p>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-black tracking-wider uppercase text-white drop-shadow-sm">
+                {firm?.shortName || (isAshapura ? 'ASHAPURA' : 'SHASHWAT')}
+              </span>
+              <span className="text-[10px] font-mono font-bold px-2 py-0.2 rounded-full bg-white/20 text-amber-300 border border-white/20">
+                {isAshapura ? 'Plywood Division' : 'Timber Division'}
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-300 font-medium tracking-tight">
+              Commercial Operations Suite
+            </p>
+          </div>
         </div>
 
-        {/* Quick Actions */}
-        <div className="flex flex-wrap gap-2.5">
+        {/* Center: Interactive Search / Prompt Pill with Glowing Chromatic Orb */}
+        <div className="w-full md:w-auto flex-1 max-w-md mx-auto">
+          <div className="relative flex items-center rounded-full bg-black/40 hover:bg-black/50 border border-white/20 px-3.5 py-1.5 backdrop-blur-md shadow-inner transition group focus-within:ring-2 focus-within:ring-amber-400/50">
+            {/* Chromatic Iridescent Orb */}
+            <div className="relative flex items-center justify-center mr-2.5 shrink-0">
+              <span className="absolute w-5 h-5 rounded-full bg-gradient-to-tr from-purple-500 via-pink-400 to-amber-300 blur-[3px] opacity-80 animate-pulse" />
+              <span className="relative w-4 h-4 rounded-full bg-gradient-to-tr from-indigo-500 via-rose-400 to-amber-200 shadow-sm" />
+            </div>
+
+            <input
+              type="text"
+              placeholder="Show me what needs attention in billing, stock & dispatches..."
+              value={searchPrompt}
+              onChange={(e) => setSearchPrompt(e.target.value)}
+              className="w-full bg-transparent text-xs text-white placeholder:text-slate-400 focus:outline-none font-medium truncate"
+            />
+
+            <Search className="w-4 h-4 text-slate-400 ml-2 shrink-0 group-hover:text-white transition" />
+          </div>
+        </div>
+
+        {/* Right: Ambient Glow Toggle, WhatsApp Summary & Notification Bell */}
+        <div className="flex items-center gap-2 self-end md:self-auto">
+          {/* Ambient Lighting Toggle */}
           <button
+            type="button"
+            onClick={() => setIsGlowHigh(!isGlowHigh)}
+            className="p-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-slate-200 hover:text-amber-300 transition cursor-pointer"
+            title="Toggle Ambient Glass Lighting"
+          >
+            {isGlowHigh ? <Sun className="w-4 h-4 text-amber-300" /> : <Moon className="w-4 h-4 text-slate-300" />}
+          </button>
+
+          {/* WhatsApp Executive Summary */}
+          <button
+            type="button"
             onClick={() => setShowDashboardWhatsApp(true)}
-            className="flex items-center space-x-1.5 px-3.5 py-2 bg-emerald-700 hover:bg-emerald-600 text-white rounded-lg text-xs font-bold transition shadow-sm cursor-pointer"
-            title="Send Daily Operations Summary PDF to WhatsApp"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600/80 hover:bg-emerald-500/90 text-white border border-emerald-400/30 text-xs font-bold transition shadow-md cursor-pointer backdrop-blur-md"
+            title="Send Executive PDF Report to WhatsApp"
           >
-            <svg className="w-4 h-4 fill-white shrink-0" viewBox="0 0 24 24">
-              <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.275.072.376-.044c.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.043.073.043.419-.101.824z"/>
-            </svg>
-            <span>WhatsApp Summary</span>
+            <Send className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">WhatsApp Report</span>
           </button>
+
+          {/* Notifications Bell */}
+          <div className="relative p-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-slate-200 cursor-pointer transition">
+            <Bell className="w-4 h-4" />
+            {lowStockItems.length > 0 && (
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-black animate-ping" />
+            )}
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-black" />
+          </div>
+        </div>
+      </header>
+
+      {/* ===================================================================== */}
+      {/* 3. MAIN COMMAND CENTER WITH LEFT FLOATING DOCK */}
+      {/* ===================================================================== */}
+      <div className="flex flex-col lg:flex-row gap-5 items-start">
+        
+        {/* Left Floating Glass Dock Rail */}
+        <aside className="hidden lg:flex flex-col gap-2 p-2 rounded-2xl bg-white/10 dark:bg-black/35 backdrop-blur-2xl border border-white/15 shadow-xl shrink-0">
           <button
-            onClick={onOpenInvoice}
-            className="flex items-center space-x-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold transition shadow-sm"
+            type="button"
+            onClick={() => setActiveDock('overview')}
+            className={`p-3 rounded-xl transition cursor-pointer ${
+              activeDock === 'overview'
+                ? 'bg-white/25 text-white shadow-md border border-white/30'
+                : 'text-slate-300 hover:text-white hover:bg-white/10'
+            }`}
+            title="Command Center Overview"
           >
-            <PlusCircle className="w-4 h-4" />
-            <span>Generate Bill</span>
+            <LayoutDashboard className="w-4 h-4" />
           </button>
+
           <button
-            onClick={() => onOpenStockMovement('STOCK_IN')}
-            className="flex items-center space-x-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition shadow-sm"
+            type="button"
+            onClick={() => setActiveDock('revenue')}
+            className={`p-3 rounded-xl transition cursor-pointer ${
+              activeDock === 'revenue'
+                ? 'bg-amber-500/30 text-amber-300 shadow-md border border-amber-400/30'
+                : 'text-slate-300 hover:text-white hover:bg-white/10'
+            }`}
+            title="Billing & Revenue Metrics"
           >
-            <ArrowDownRight className="w-4 h-4" />
-            <span>Stock In (Input)</span>
+            <TrendingUp className="w-4 h-4" />
           </button>
+
           <button
-            onClick={() => onOpenStockMovement('STOCK_OUT')}
-            className="flex items-center space-x-1.5 px-3.5 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-xs font-bold transition shadow-sm"
+            type="button"
+            onClick={() => setActiveDock('inventory')}
+            className={`p-3 rounded-xl transition cursor-pointer ${
+              activeDock === 'inventory'
+                ? 'bg-emerald-500/30 text-emerald-300 shadow-md border border-emerald-400/30'
+                : 'text-slate-300 hover:text-white hover:bg-white/10'
+            }`}
+            title="Stock & Inventory Balance"
           >
-            <ArrowUpRight className="w-4 h-4" />
-            <span>Stock Out (Output)</span>
+            <Boxes className="w-4 h-4" />
           </button>
-        </div>
-      </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-          <div className="flex justify-between items-start">
-            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Invoiced</p>
-            <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
-              <IndianRupee className="w-4 h-4" />
+          <button
+            type="button"
+            onClick={() => setActiveDock('fleet')}
+            className={`p-3 rounded-xl transition cursor-pointer ${
+              activeDock === 'fleet'
+                ? 'bg-blue-500/30 text-blue-300 shadow-md border border-blue-400/30'
+                : 'text-slate-300 hover:text-white hover:bg-white/10'
+            }`}
+            title="Fleet Logistics & Delivery Trips"
+          >
+            <Truck className="w-4 h-4" />
+          </button>
+        </aside>
+
+        {/* Center Big Glass Card Container */}
+        <main className="flex-1 w-full rounded-3xl bg-slate-900/50 dark:bg-black/45 backdrop-blur-3xl border border-white/20 p-5 sm:p-8 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.6)]">
+          {/* Header Row: Headline + Timeframe Switcher */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-7">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-2">
+                <span>Command Center</span>
+                <Sparkles className="w-5 h-5 text-amber-400" />
+              </h1>
+              <p className="text-xs text-slate-300 mt-1">
+                {isAshapura 
+                  ? 'Engineered plywoods, architectural veneers, revenue, and material dispatches.' 
+                  : 'Sawn timber planks, teak round logs, commercial billings, and fleet deliveries.'}
+              </p>
+            </div>
+
+            {/* Timeframe Filter Pills */}
+            <div className="flex items-center gap-1 p-1 rounded-full bg-black/40 backdrop-blur-md border border-white/15 self-start sm:self-auto text-xs font-semibold text-slate-300 shadow-inner">
+              {[
+                { id: 'today', label: 'Today' },
+                { id: '7d', label: '7 days' },
+                { id: '30d', label: '30 days' },
+                { id: 'all', label: 'All Time' },
+              ].map(tf => (
+                <button
+                  key={tf.id}
+                  type="button"
+                  onClick={() => setTimeframe(tf.id)}
+                  className={`px-3 py-1 rounded-full transition cursor-pointer ${
+                    timeframe === tf.id
+                      ? 'bg-white text-slate-900 font-bold shadow-md'
+                      : 'hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  {tf.label}
+                </button>
+              ))}
             </div>
           </div>
-          <p className="text-2xl font-black text-slate-900 mt-2">
-            ₹{totalBilled.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-          </p>
-          <span className="text-[11px] text-slate-500 mt-1 block">
-            {invoices.length} Generated Invoices
-          </span>
-        </div>
 
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-          <div className="flex justify-between items-start">
-            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Balance Due</p>
-            <div className="p-2 bg-rose-50 text-rose-600 rounded-lg">
-              <Receipt className="w-4 h-4" />
-            </div>
-          </div>
-          <p className="text-2xl font-black text-rose-700 mt-2">
-            ₹{totalPending.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-          </p>
-          <span className="text-[11px] text-rose-600 font-medium mt-1 block">
-            Awaiting Customer Clearance
-          </span>
-        </div>
+          {/* =================================================================== */}
+          {/* 4. GLASS METRIC TILES GRID (MATCHING 21ST DEV GLASSY DASHBOARD) */}
+          {/* =================================================================== */}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-12 gap-5 mb-7">
+            
+            {/* HERO TOTAL REVENUE CARD (Col Span 7) */}
+            <div className="xl:col-span-7 rounded-2xl bg-white/10 hover:bg-white/15 backdrop-blur-2xl border border-white/20 p-5 sm:p-6 shadow-xl transition relative overflow-hidden flex flex-col justify-between">
+              {/* Subtle top glare */}
+              <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white/40 to-transparent" />
 
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-          <div className="flex justify-between items-start">
-            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Stock Catalog</p>
-            <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
-              <Boxes className="w-4 h-4" />
-            </div>
-          </div>
-          <p className="text-2xl font-black text-slate-900 mt-2">
-            {inventory.length} Items
-          </p>
-          <span className="text-[11px] text-slate-500 mt-1 block">
-            Raw Materials & Finished Products
-          </span>
-        </div>
-
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-          <div className="flex justify-between items-start">
-            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Low Stock Alerts</p>
-            <div className={`p-2 rounded-lg ${lowStockItems.length > 0 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>
-              <AlertTriangle className="w-4 h-4" />
-            </div>
-          </div>
-          <p className={`text-2xl font-black mt-2 ${lowStockItems.length > 0 ? 'text-amber-700' : 'text-slate-900'}`}>
-            {lowStockItems.length} Items
-          </p>
-          <span className="text-[11px] text-slate-500 mt-1 block">
-            At or below reorder threshold
-          </span>
-        </div>
-      </div>
-
-      {/* Two Column Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Invoices */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-              <Receipt className="w-4 h-4 text-brand-600" /> Recent Customer Bills
-            </h3>
-            <span className="text-[11px] text-slate-500 font-mono">Micro-PDF (&lt; 8 KB)</span>
-          </div>
-
-          <div className="divide-y divide-slate-100 text-xs">
-            {invoices.slice(0, 5).map((inv) => (
-              <div key={inv.id} className="py-3 flex justify-between items-center">
-                <div>
-                  <p className="font-bold text-slate-800">{inv.customer_name}</p>
-                  <p className="text-[11px] text-slate-500">{inv.invoice_number} • {inv.invoice_date}</p>
+              <div>
+                <div className="flex items-center justify-between text-xs text-slate-300 font-semibold mb-2">
+                  <span className="uppercase tracking-wider text-[11px] text-amber-200">Total Billed Revenue</span>
+                  <span className="font-mono text-slate-400">INR (₹)</span>
                 </div>
-                <div className="text-right">
-                  <p className="font-bold text-slate-900">₹{Number(inv.total_amount).toFixed(2)}</p>
-                  <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${inv.status === 'PAID'
-                    ? 'bg-emerald-100 text-emerald-800'
-                    : inv.status === 'PARTIALLY_PAID'
-                      ? 'bg-amber-100 text-amber-800'
-                      : 'bg-rose-100 text-rose-800'
-                    }`}>
-                    {inv.status}
+
+                <div className="flex items-baseline gap-3 mb-2">
+                  <span className="text-3xl sm:text-4xl font-black text-white font-mono tracking-tight drop-shadow-md">
+                    ₹{totalBilled.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                  <span className="inline-flex items-center text-xs font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-400/30 px-2 py-0.5 rounded-full">
+                    ↗ +8.3% <span className="font-normal text-emerald-300/80 ml-1 hidden sm:inline">vs prior period</span>
                   </span>
                 </div>
-              </div>
-            ))}
-          </div>
-        </div>
 
-        {/* Recent Stock Movements */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-              <Boxes className="w-4 h-4 text-emerald-600" /> Recent Stock Movements (In/Out)
-            </h3>
-            <span className="text-[11px] text-emerald-600 font-bold">Live Inventory</span>
-          </div>
+                {/* Quick Action Pills */}
+                <div className="flex flex-wrap items-center gap-2.5 mt-4">
+                  <button
+                    type="button"
+                    onClick={onOpenInvoice}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white hover:bg-slate-100 text-slate-950 font-black text-xs transition shadow-lg cursor-pointer"
+                  >
+                    <PlusCircle className="w-3.5 h-3.5 text-amber-600" />
+                    <span>Create Invoice ↗</span>
+                  </button>
 
-          <div className="divide-y divide-slate-100 text-xs">
-            {transactions.slice(0, 5).map((t) => {
-              const isStockIn = t.transaction_type === 'STOCK_IN';
-              return (
-                <div key={t.id} className="py-3 flex justify-between items-center">
-                  <div className="flex items-center space-x-2.5">
-                    <div className={`p-1.5 rounded-lg ${isStockIn ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
-                      {isStockIn ? <ArrowDownRight className="w-3.5 h-3.5" /> : <ArrowUpRight className="w-3.5 h-3.5" />}
-                    </div>
-                    <div>
-                      <p className="font-bold text-slate-800">{t.item_name}</p>
-                      <p className="text-[11px] text-slate-500">{t.party_name} • Ref: {t.reference_number}</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className={`font-bold ${isStockIn ? 'text-emerald-700' : 'text-rose-700'}`}>
-                      {isStockIn ? '+' : '-'}{t.quantity} {t.unit}
-                    </p>
-                    <span className="text-[10px] text-slate-400">Bal: {t.balance_after}</span>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowDashboardWhatsApp(true)}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs transition border border-white/20 cursor-pointer"
+                  >
+                    <span>View Report →</span>
+                  </button>
                 </div>
-              );
-            })}
+              </div>
+
+              {/* Sub-Metric 3-way Split */}
+              <div className="grid grid-cols-3 gap-3 mt-6 pt-4 border-t border-white/10 text-xs">
+                <div>
+                  <span className="text-[10px] text-slate-400 block uppercase font-semibold">Cleared Cash</span>
+                  <span className="text-sm font-black text-white font-mono">₹{totalReceived.toFixed(0)}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-rose-300 block uppercase font-semibold">Balance Due</span>
+                  <span className="text-sm font-black text-rose-400 font-mono">₹{totalPending.toFixed(0)}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400 block uppercase font-semibold">Avg / Invoice</span>
+                  <span className="text-sm font-black text-slate-200 font-mono">₹{avgBill.toFixed(0)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* EMERALD CARD: STOCK INTAKE (Col Span 5 / 2 on mobile) */}
+            <div className="xl:col-span-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Card A: Stock In (Input) */}
+              <div 
+                onClick={() => onOpenStockMovement && onOpenStockMovement('STOCK_IN')}
+                className="rounded-2xl bg-emerald-950/40 hover:bg-emerald-950/60 backdrop-blur-2xl border border-emerald-400/30 p-5 shadow-xl transition cursor-pointer flex flex-col justify-between"
+              >
+                <div className="flex items-center justify-between text-emerald-300 text-xs font-bold">
+                  <span>Stock In (Input)</span>
+                  <ArrowDownRight className="w-4 h-4 text-emerald-400" />
+                </div>
+                <div className="my-3">
+                  <p className="text-2xl font-black text-emerald-400 font-mono">
+                    +{totalStockInQty} <span className="text-xs font-normal">pcs</span>
+                  </p>
+                  <span className="text-[10px] text-emerald-300/80 font-semibold block mt-0.5">
+                    ↗ +9.6% vs prior period
+                  </span>
+                </div>
+                <span className="text-[11px] text-slate-400 font-mono">
+                  {transactions.filter(t => t.transaction_type === 'STOCK_IN').length} inward vouchers
+                </span>
+              </div>
+
+              {/* Card B: Registered Fleet Logistics */}
+              <div className="rounded-2xl bg-blue-950/40 hover:bg-blue-950/60 backdrop-blur-2xl border border-blue-400/30 p-5 shadow-xl transition flex flex-col justify-between">
+                <div className="flex items-center justify-between text-blue-300 text-xs font-bold">
+                  <span>Fleet Deliveries</span>
+                  <Truck className="w-4 h-4 text-blue-400" />
+                </div>
+                <div className="my-3">
+                  <p className="text-2xl font-black text-blue-300 font-mono">
+                    {vehicles.length} <span className="text-xs font-normal">fleet</span>
+                  </p>
+                  <span className="text-[10px] text-blue-300/80 font-semibold block mt-0.5">
+                    {availableVehicles.length} Available • {onRouteVehicles.length} Dispatched
+                  </span>
+                </div>
+                <span className="text-[11px] text-slate-400 font-mono">
+                  Active transport network
+                </span>
+              </div>
+
+              {/* Card C: Stock Out (Dispatched) */}
+              <div 
+                onClick={() => onOpenStockMovement && onOpenStockMovement('STOCK_OUT')}
+                className="rounded-2xl bg-rose-950/40 hover:bg-rose-950/60 backdrop-blur-2xl border border-rose-400/30 p-5 shadow-xl transition cursor-pointer flex flex-col justify-between"
+              >
+                <div className="flex items-center justify-between text-rose-300 text-xs font-bold">
+                  <span>Stock Out (Output)</span>
+                  <ArrowUpRight className="w-4 h-4 text-rose-400" />
+                </div>
+                <div className="my-3">
+                  <p className="text-2xl font-black text-rose-400 font-mono">
+                    -{totalStockOutQty} <span className="text-xs font-normal">pcs</span>
+                  </p>
+                  <span className="text-[10px] text-rose-300/80 font-semibold block mt-0.5">
+                    Dispatched deliveries
+                  </span>
+                </div>
+                <span className="text-[11px] text-slate-400 font-mono">
+                  {transactions.filter(t => t.transaction_type === 'STOCK_OUT').length} logged dispatches
+                </span>
+              </div>
+
+              {/* Card D: Low Stock & Warehouse Alerts */}
+              <div className="rounded-2xl bg-amber-950/40 hover:bg-amber-950/60 backdrop-blur-2xl border border-amber-400/30 p-5 shadow-xl transition flex flex-col justify-between">
+                <div className="flex items-center justify-between text-amber-300 text-xs font-bold">
+                  <span>Stock Catalog</span>
+                  <AlertTriangle className="w-4 h-4 text-amber-400" />
+                </div>
+                <div className="my-3">
+                  <p className="text-2xl font-black text-amber-300 font-mono">
+                    {inventory.length} <span className="text-xs font-normal">items</span>
+                  </p>
+                  <span className={`text-[10px] font-bold block mt-0.5 ${
+                    lowStockItems.length > 0 ? 'text-amber-400' : 'text-emerald-400'
+                  }`}>
+                    {lowStockItems.length > 0 ? `⚠️ ${lowStockItems.length} at reorder level` : '✓ All stocks healthy'}
+                  </span>
+                </div>
+                <span className="text-[11px] text-slate-400 font-mono">
+                  {isAshapura ? 'Plywood & Veneer Items' : 'Timber & Plank Species'}
+                </span>
+              </div>
+            </div>
           </div>
-        </div>
+
+          {/* =================================================================== */}
+          {/* 5. BOTTOM SPLIT PANELS (RECENT BILLS & LIVE STOCK MOVEMENTS) */}
+          {/* =================================================================== */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            
+            {/* Panel 1: Recent Invoices Glass List */}
+            <div className="rounded-2xl bg-white/10 backdrop-blur-2xl border border-white/15 p-5 shadow-xl">
+              <div className="flex items-center justify-between pb-3 mb-3 border-b border-white/10">
+                <div className="flex items-center gap-2">
+                  <Receipt className="w-4 h-4 text-amber-400" />
+                  <h3 className="text-sm font-black text-white">Recent Customer Bills</h3>
+                </div>
+                <span className="text-[10px] font-mono text-amber-300 bg-amber-950/60 px-2 py-0.5 rounded-full border border-amber-400/30">
+                  Micro-PDF (&lt; 8 KB)
+                </span>
+              </div>
+
+              <div className="divide-y divide-white/10 text-xs">
+                {cleanInvoices.length === 0 ? (
+                  <p className="py-8 text-center text-slate-400">No bills generated yet.</p>
+                ) : (
+                  cleanInvoices.slice(0, 5).map((inv) => (
+                    <div 
+                      key={inv.id || inv.invoice_number} 
+                      onClick={() => onPrintInvoice && onPrintInvoice(inv)}
+                      className="py-3 flex items-center justify-between hover:bg-white/5 px-2 rounded-xl transition cursor-pointer group"
+                    >
+                      <div>
+                        <p className="font-bold text-white group-hover:text-amber-300 transition">{inv.customer_name}</p>
+                        <p className="text-[11px] text-slate-400 font-mono">
+                          {inv.invoice_number} • {inv.invoice_date || 'Recent'}
+                        </p>
+                      </div>
+
+                      <div className="text-right">
+                        <p className="font-black text-white font-mono">
+                          ₹{Number(inv.total_amount || 0).toFixed(2)}
+                        </p>
+                        <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          inv.status === 'PAID'
+                            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/30'
+                            : inv.status === 'PARTIALLY_PAID'
+                              ? 'bg-amber-500/20 text-amber-300 border border-amber-400/30'
+                              : 'bg-rose-500/20 text-rose-300 border border-rose-400/30'
+                        }`}>
+                          {inv.status || 'UNPAID'}
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Panel 2: Live Stock Movements & Dispatches */}
+            <div className="rounded-2xl bg-white/10 backdrop-blur-2xl border border-white/15 p-5 shadow-xl">
+              <div className="flex items-center justify-between pb-3 mb-3 border-b border-white/10">
+                <div className="flex items-center gap-2">
+                  <Boxes className="w-4 h-4 text-emerald-400" />
+                  <h3 className="text-sm font-black text-white">Live Stock In &amp; Out Movements</h3>
+                </div>
+                <span className="text-[10px] font-mono text-emerald-300 bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-400/30">
+                  Real-time Inventory
+                </span>
+              </div>
+
+              <div className="divide-y divide-white/10 text-xs">
+                {transactions.length === 0 ? (
+                  <p className="py-8 text-center text-slate-400">No stock movements recorded yet.</p>
+                ) : (
+                  transactions.slice(0, 5).map((t) => {
+                    const isIn = t.transaction_type === 'STOCK_IN';
+                    return (
+                      <div key={t.id} className="py-3 flex items-center justify-between hover:bg-white/5 px-2 rounded-xl transition">
+                        <div className="flex items-center space-x-2.5">
+                          <div className={`p-1.5 rounded-xl border ${
+                            isIn ? 'bg-emerald-500/20 text-emerald-400 border-emerald-400/30' : 'bg-rose-500/20 text-rose-400 border-rose-400/30'
+                          }`}>
+                            {isIn ? <ArrowDownRight className="w-3.5 h-3.5" /> : <ArrowUpRight className="w-3.5 h-3.5" />}
+                          </div>
+                          <div>
+                            <p className="font-bold text-white">{t.item_name}</p>
+                            <p className="text-[11px] text-slate-400 font-mono">
+                              {t.party_name || (isIn ? 'Supplier' : 'Customer')} • Ref: {t.reference_number || '-'}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="text-right">
+                          <p className={`font-mono font-black ${isIn ? 'text-emerald-400' : 'text-rose-400'}`}>
+                            {isIn ? '+' : '-'}{t.quantity} {t.unit || 'pcs'}
+                          </p>
+                          <span className="text-[10px] text-slate-400 font-mono">
+                            Bal: {t.balance_after}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
+          </div>
+
+        </main>
       </div>
-      {/* WhatsApp Modal for Dashboard Executive PDF Report */}
+
+      {/* Global WhatsApp Modal for Executive Summary */}
       {showDashboardWhatsApp && (
         <WhatsAppModal
           isOpen={showDashboardWhatsApp}
           onClose={() => setShowDashboardWhatsApp(false)}
           type="dashboard"
-          data={{ invoices, inventory, vehicles }}
+          data={{ invoices: cleanInvoices, inventory, vehicles }}
           firm={firm}
         />
       )}

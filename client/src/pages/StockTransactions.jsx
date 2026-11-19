@@ -39,7 +39,14 @@ export default function StockTransactions({
   const [viewMode, setViewMode] = useState('table'); // 'table' | 'folders'
   const [activeTab, setActiveTab] = useState('ALL'); // 'ALL' | 'BILLS' | 'STOCK_IN' | 'STOCK_OUT' | 'VEHICLES'
   const [searchTerm, setSearchTerm] = useState('');
-  const [dateFilter, setDateFilter] = useState('ALL'); // 'ALL' | 'TODAY' | 'WEEK' | 'MONTH'
+  const [dateFilter, setDateFilter] = useState('ALL'); // 'ALL' | 'TODAY' | 'YESTERDAY' | 'CUSTOM' | 'WEEK' | 'MONTH'
+  const [selectedCustomDate, setSelectedCustomDate] = useState(() => {
+    const today = new Date();
+    const y = today.getFullYear();
+    const m = String(today.getMonth() + 1).padStart(2, '0');
+    const d = String(today.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  });
   
   // Modals
   const [whatsAppModalData, setWhatsAppModalData] = useState(null);
@@ -56,26 +63,102 @@ export default function StockTransactions({
     );
   }, [invoices]);
 
+  // Extract 'YYYY-MM-DD' cleanly from any date representation (string, ISO, Date) in local time
+  const toYMD = (val) => {
+    if (!val) return '';
+    if (typeof val === 'string') {
+      const trimmed = val.trim();
+      if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+        return trimmed;
+      }
+    }
+    const d = new Date(val);
+    if (isNaN(d.getTime())) {
+      if (typeof val === 'string') {
+        const match = val.trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (match) return `${match[1]}-${match[2]}-${match[3]}`;
+      }
+      return '';
+    }
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const todayObj = useMemo(() => new Date(), []);
+  const todayYMD = useMemo(() => toYMD(todayObj), [todayObj]);
+
+  const yesterdayYMD = useMemo(() => {
+    const y = new Date();
+    y.setDate(y.getDate() - 1);
+    return toYMD(y);
+  }, []);
+
   // Date filtering helper
   const isWithinDateFilter = (dateStr) => {
     if (!dateStr || dateFilter === 'ALL') return true;
-    const target = new Date(dateStr);
-    if (isNaN(target.getTime())) return true;
-    const now = new Date();
-    
+    const itemYMD = toYMD(dateStr);
+    if (!itemYMD) return true;
+
     if (dateFilter === 'TODAY') {
-      return target.toDateString() === now.toDateString();
+      return itemYMD === todayYMD;
+    }
+    if (dateFilter === 'YESTERDAY') {
+      return itemYMD === yesterdayYMD;
+    }
+    if (dateFilter === 'CUSTOM') {
+      return itemYMD === selectedCustomDate;
     }
     if (dateFilter === 'WEEK') {
-      const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const target = new Date(dateStr);
+      const oneWeekAgo = new Date(todayObj.getTime() - 7 * 24 * 60 * 60 * 1000);
       return target >= oneWeekAgo;
     }
     if (dateFilter === 'MONTH') {
-      const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      const target = new Date(dateStr);
+      const oneMonthAgo = new Date(todayObj.getTime() - 30 * 24 * 60 * 60 * 1000);
       return target >= oneMonthAgo;
     }
     return true;
   };
+
+  const getDateFilterLabel = () => {
+    if (dateFilter === 'ALL') return 'All Time';
+    if (dateFilter === 'TODAY') return `Today (${todayYMD})`;
+    if (dateFilter === 'YESTERDAY') return `Yesterday (${yesterdayYMD})`;
+    if (dateFilter === 'CUSTOM') return `Chosen Date (${selectedCustomDate})`;
+    if (dateFilter === 'WEEK') return 'Last 7 Days';
+    if (dateFilter === 'MONTH') return 'Last 30 Days';
+    return dateFilter;
+  };
+
+  // =====================================================================
+  // TODAY'S REAL-TIME OFFICE HOURS WORKFLOW ENTRIES
+  // =====================================================================
+  const todayInvoices = useMemo(() => {
+    return cleanInvoices.filter(inv => toYMD(inv.invoice_date || inv.created_at) === todayYMD);
+  }, [cleanInvoices, todayYMD]);
+
+  const todayStockIn = useMemo(() => {
+    return transactions.filter(t => t.transaction_type === 'STOCK_IN' && toYMD(t.created_at || t.transaction_date) === todayYMD);
+  }, [transactions, todayYMD]);
+
+  const todayStockOut = useMemo(() => {
+    return transactions.filter(t => t.transaction_type === 'STOCK_OUT' && toYMD(t.created_at || t.transaction_date) === todayYMD);
+  }, [transactions, todayYMD]);
+
+  const todayVehiclesActive = useMemo(() => {
+    return vehicles.filter(v => 
+      cleanInvoices.some(i => toYMD(i.invoice_date || i.created_at) === todayYMD && i.vehicle_no?.trim().toUpperCase() === v.vehicle_number?.trim().toUpperCase()) ||
+      transactions.some(t => toYMD(t.created_at || t.transaction_date) === todayYMD && t.vehicle_no?.trim().toUpperCase() === v.vehicle_number?.trim().toUpperCase())
+    );
+  }, [vehicles, cleanInvoices, transactions, todayYMD]);
+
+  const todayTotalEntries = todayInvoices.length + todayStockIn.length + todayStockOut.length;
+  const todayBilledValue = todayInvoices.reduce((sum, inv) => sum + Number(inv.total_amount || 0), 0);
+  const todayStockInQty = todayStockIn.reduce((sum, t) => sum + Number(t.quantity || 0), 0);
+  const todayStockOutQty = todayStockOut.reduce((sum, t) => sum + Number(t.quantity || 0), 0);
 
   // 1. FILTERED TRANSACTIONS (Stock In & Stock Out)
   const filteredTransactions = useMemo(() => {
@@ -90,7 +173,7 @@ export default function StockTransactions({
       const matchesDate = isWithinDateFilter(t.created_at || t.transaction_date);
       return matchesSearch && matchesDate;
     });
-  }, [transactions, searchTerm, dateFilter]);
+  }, [transactions, searchTerm, dateFilter, selectedCustomDate, todayYMD, yesterdayYMD]);
 
   const stockInList = useMemo(() => {
     return filteredTransactions.filter(t => t.transaction_type === 'STOCK_IN');
@@ -113,9 +196,9 @@ export default function StockTransactions({
       const matchesDate = isWithinDateFilter(inv.invoice_date || inv.created_at);
       return matchesSearch && matchesDate;
     });
-  }, [cleanInvoices, searchTerm, dateFilter]);
+  }, [cleanInvoices, searchTerm, dateFilter, selectedCustomDate, todayYMD, yesterdayYMD]);
 
-  // 3. FILTERED VEHICLES & LOGGED DISPATCHES
+  // 3. FILTERED VEHICLES & LOGGED DISPATCHES (Filtered by date & search)
   const filteredVehicles = useMemo(() => {
     return vehicles.filter(v => {
       const matchesSearch = 
@@ -123,9 +206,30 @@ export default function StockTransactions({
         v.driver_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         v.vehicle_type?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         v.current_destination?.toLowerCase().includes(searchTerm.toLowerCase());
-      return matchesSearch;
+      if (!matchesSearch) return false;
+
+      if (dateFilter === 'ALL') return true;
+
+      // Check if vehicle was registered/updated on this date
+      const matchesVehicleDate = isWithinDateFilter(v.updated_at || v.created_at);
+
+      // Check if vehicle had an invoice/delivery trip on this date
+      const hasInvoiceOnDate = cleanInvoices.some(inv => 
+        inv.vehicle_no && 
+        inv.vehicle_no.trim().toUpperCase() === v.vehicle_number?.trim().toUpperCase() &&
+        isWithinDateFilter(inv.invoice_date || inv.created_at)
+      );
+
+      // Check if vehicle had a stock dispatch on this date
+      const hasTransactionOnDate = transactions.some(t =>
+        t.vehicle_no &&
+        t.vehicle_no.trim().toUpperCase() === v.vehicle_number?.trim().toUpperCase() &&
+        isWithinDateFilter(t.created_at || t.transaction_date)
+      );
+
+      return matchesVehicleDate || hasInvoiceOnDate || hasTransactionOnDate;
     });
-  }, [vehicles, searchTerm]);
+  }, [vehicles, searchTerm, dateFilter, selectedCustomDate, cleanInvoices, transactions, todayYMD, yesterdayYMD]);
 
   // 4. UNIFIED ACTIVITY TIMELINE (Chronologically sorted)
   const unifiedTimeline = useMemo(() => {
@@ -249,6 +353,142 @@ export default function StockTransactions({
         </div>
       </div>
 
+      {/* ===================================================================== */}
+      {/* TODAY'S LIVE OFFICE HOURS REAL-TIME ENTRIES DONE BANNER */}
+      {/* ===================================================================== */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-950 via-slate-900 to-amber-950 p-4 sm:p-5 text-white shadow-xl border border-amber-500/30 no-print">
+        {/* Decorative ambient glow */}
+        <div className="absolute -right-10 -top-10 w-44 h-44 bg-amber-500/10 rounded-full blur-2xl pointer-events-none" />
+        <div className="absolute left-1/3 -bottom-10 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="relative flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          {/* Left: Live indicator, title, and count */}
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+              </span>
+              <span className="text-[11px] font-black uppercase tracking-wider text-emerald-300 bg-emerald-950/80 border border-emerald-500/40 px-2.5 py-0.5 rounded-full flex items-center gap-1.5">
+                <Clock className="w-3 h-3 text-emerald-400" />
+                <span>Office Hours Live Operations</span>
+                <span className="text-emerald-400/60 font-mono">·</span>
+                <span className="font-mono text-emerald-200">{todayYMD}</span>
+              </span>
+              <span className="text-[10px] text-amber-300/80 font-mono">
+                {new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            </div>
+
+            <div className="flex items-baseline gap-3">
+              <h2 className="text-lg sm:text-2xl font-black text-white tracking-tight">
+                Today's Entries Done:
+              </h2>
+              <span className="text-2xl sm:text-3xl font-black text-amber-400 font-mono drop-shadow-sm">
+                {todayTotalEntries} {todayTotalEntries === 1 ? 'Entry' : 'Entries'}
+              </span>
+            </div>
+            <p className="text-xs text-slate-300 max-w-xl">
+              Live tracking of bills created, stock inward receipts, outward customer dispatches, and active fleet vehicles during today's business hours.
+            </p>
+          </div>
+
+          {/* Right: 4 Live Metric Action Cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 shrink-0">
+            {/* Bills Created Today */}
+            <div 
+              onClick={() => { setDateFilter('TODAY'); setActiveTab('BILLS'); }}
+              className="bg-white/10 hover:bg-white/15 backdrop-blur-md px-3 py-2.5 rounded-xl border border-white/10 cursor-pointer transition group"
+              title="Click to view today's bills"
+            >
+              <div className="flex items-center justify-between text-[10px] font-bold text-amber-300 uppercase">
+                <span>Bills Today</span>
+                <Receipt className="w-3 h-3 text-amber-400 group-hover:scale-110 transition" />
+              </div>
+              <p className="text-lg font-black text-white font-mono mt-0.5">{todayInvoices.length}</p>
+              <p className="text-[10px] text-slate-300 font-mono">₹{todayBilledValue.toFixed(0)}</p>
+            </div>
+
+            {/* Stock Inward Today */}
+            <div 
+              onClick={() => { setDateFilter('TODAY'); setActiveTab('STOCK_IN'); }}
+              className="bg-white/10 hover:bg-white/15 backdrop-blur-md px-3 py-2.5 rounded-xl border border-white/10 cursor-pointer transition group"
+              title="Click to view today's inward stock"
+            >
+              <div className="flex items-center justify-between text-[10px] font-bold text-emerald-300 uppercase">
+                <span>Stock In</span>
+                <ArrowDownRight className="w-3 h-3 text-emerald-400 group-hover:scale-110 transition" />
+              </div>
+              <p className="text-lg font-black text-emerald-400 font-mono mt-0.5">+{todayStockInQty}</p>
+              <p className="text-[10px] text-slate-300 font-mono">{todayStockIn.length} receipts</p>
+            </div>
+
+            {/* Stock Outward Today */}
+            <div 
+              onClick={() => { setDateFilter('TODAY'); setActiveTab('STOCK_OUT'); }}
+              className="bg-white/10 hover:bg-white/15 backdrop-blur-md px-3 py-2.5 rounded-xl border border-white/10 cursor-pointer transition group"
+              title="Click to view today's dispatches"
+            >
+              <div className="flex items-center justify-between text-[10px] font-bold text-rose-300 uppercase">
+                <span>Stock Out</span>
+                <ArrowUpRight className="w-3 h-3 text-rose-400 group-hover:scale-110 transition" />
+              </div>
+              <p className="text-lg font-black text-rose-400 font-mono mt-0.5">-{todayStockOutQty}</p>
+              <p className="text-[10px] text-slate-300 font-mono">{todayStockOut.length} dispatches</p>
+            </div>
+
+            {/* Fleet / Delivery Trips Today */}
+            <div 
+              onClick={() => { setDateFilter('TODAY'); setActiveTab('VEHICLES'); }}
+              className="bg-white/10 hover:bg-white/15 backdrop-blur-md px-3 py-2.5 rounded-xl border border-white/10 cursor-pointer transition group"
+              title="Click to view today's vehicle dispatches"
+            >
+              <div className="flex items-center justify-between text-[10px] font-bold text-blue-300 uppercase">
+                <span>Fleet Active</span>
+                <Truck className="w-3 h-3 text-blue-400 group-hover:scale-110 transition" />
+              </div>
+              <p className="text-lg font-black text-blue-300 font-mono mt-0.5">{todayVehiclesActive.length}</p>
+              <p className="text-[10px] text-slate-300 font-mono">Active Vehicles</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Action strip at bottom of banner */}
+        <div className="mt-3.5 pt-3 border-t border-white/10 flex flex-wrap items-center justify-between gap-2 text-xs">
+          <div className="flex items-center gap-2">
+            <span className="text-slate-300 text-[11px]">
+              Active Scope: <strong className="text-amber-300 font-mono">{getDateFilterLabel()}</strong>
+            </span>
+            {dateFilter !== 'ALL' && (
+              <span className="text-[10px] bg-white/20 text-white px-2 py-0.5 rounded-full font-bold">
+                {unifiedTimeline.length} matching events
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            {dateFilter !== 'TODAY' ? (
+              <button
+                type="button"
+                onClick={() => setDateFilter('TODAY')}
+                className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-lg text-xs transition shadow-md cursor-pointer"
+              >
+                <Clock className="w-3.5 h-3.5" />
+                <span>Focus History to Today Only ({todayTotalEntries} entries) →</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setDateFilter('ALL')}
+                className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/10 hover:bg-white/20 text-white font-bold rounded-lg text-xs transition border border-white/20 cursor-pointer"
+              >
+                <span>Reset to All Records</span>
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
       {/* KPI Stats Overview Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 no-print">
         {/* Total Invoices Billed */}
@@ -300,8 +540,8 @@ export default function StockTransactions({
         </div>
       </div>
 
-      {/* Main Tabs Navigation */}
-      <div className="bg-white p-2 rounded-2xl border border-slate-200 shadow-xs flex flex-wrap items-center justify-between gap-3 no-print">
+      {/* Main Tabs Navigation & Filter Controls */}
+      <div className="bg-white p-2.5 rounded-2xl border border-slate-200 shadow-xs flex flex-wrap items-center justify-between gap-3 no-print">
         {/* Tab Buttons */}
         <div className="flex items-center flex-wrap gap-1">
           <button
@@ -384,23 +624,85 @@ export default function StockTransactions({
           </button>
         </div>
 
-        {/* Date Filter Quick Pills */}
-        <div className="flex items-center gap-1 text-[11px] font-semibold text-slate-500">
-          <Calendar className="w-3.5 h-3.5 text-slate-400" />
-          {['ALL', 'TODAY', 'WEEK', 'MONTH'].map((df) => (
+        {/* Date Filter Quick Pills & Choose Date Picker */}
+        <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-600 flex-wrap">
+          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
             <button
-              key={df}
+              key="ALL"
               type="button"
-              onClick={() => setDateFilter(df)}
-              className={`px-2 py-1 rounded-lg transition cursor-pointer ${
-                dateFilter === df
-                  ? 'bg-slate-800 text-white font-bold'
-                  : 'hover:bg-slate-100 text-slate-600'
+              onClick={() => setDateFilter('ALL')}
+              className={`px-2.5 py-1 rounded-lg transition cursor-pointer ${
+                dateFilter === 'ALL'
+                  ? 'bg-slate-900 text-white font-bold shadow-xs'
+                  : 'hover:bg-slate-200/80 text-slate-600'
               }`}
             >
-              {df === 'ALL' ? 'All Time' : df === 'TODAY' ? 'Today' : df === 'WEEK' ? '7 Days' : '30 Days'}
+              All Records
             </button>
-          ))}
+            <button
+              key="TODAY"
+              type="button"
+              onClick={() => setDateFilter('TODAY')}
+              className={`px-2.5 py-1 rounded-lg transition cursor-pointer flex items-center gap-1 ${
+                dateFilter === 'TODAY'
+                  ? 'bg-amber-500 text-slate-950 font-black shadow-xs'
+                  : 'hover:bg-slate-200/80 text-slate-700 font-semibold'
+              }`}
+            >
+              <span>Today</span>
+              <span className={`px-1 py-0.2 rounded text-[10px] font-mono ${
+                dateFilter === 'TODAY' ? 'bg-slate-900 text-amber-300' : 'bg-slate-200 text-slate-700'
+              }`}>
+                {todayTotalEntries}
+              </span>
+            </button>
+            <button
+              key="YESTERDAY"
+              type="button"
+              onClick={() => setDateFilter('YESTERDAY')}
+              className={`px-2.5 py-1 rounded-lg transition cursor-pointer ${
+                dateFilter === 'YESTERDAY'
+                  ? 'bg-slate-900 text-white font-bold shadow-xs'
+                  : 'hover:bg-slate-200/80 text-slate-600'
+              }`}
+            >
+              Yesterday
+            </button>
+          </div>
+
+          {/* Custom Date Picker (Choose Date) */}
+          <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200 shadow-2xs">
+            <Calendar className="w-3.5 h-3.5 text-amber-600 ml-1" />
+            <label htmlFor="history-choose-date" className="text-[11px] font-bold text-slate-700 cursor-pointer">
+              Choose Date:
+            </label>
+            <input
+              id="history-choose-date"
+              type="date"
+              value={selectedCustomDate}
+              onChange={(e) => {
+                if (e.target.value) {
+                  setSelectedCustomDate(e.target.value);
+                  setDateFilter('CUSTOM');
+                }
+              }}
+              className={`px-2 py-0.5 rounded-lg text-xs font-mono font-bold border transition cursor-pointer focus:outline-none focus:ring-1 focus:ring-amber-500 ${
+                dateFilter === 'CUSTOM'
+                  ? 'bg-amber-50 border-amber-400 text-amber-950 ring-1 ring-amber-400'
+                  : 'bg-slate-50 border-slate-300 text-slate-700'
+              }`}
+            />
+            {dateFilter === 'CUSTOM' && (
+              <button
+                type="button"
+                onClick={() => setDateFilter('ALL')}
+                className="text-slate-400 hover:text-rose-600 text-[10px] px-1 font-bold cursor-pointer"
+                title="Clear date filter"
+              >
+                ✕
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -424,6 +726,27 @@ export default function StockTransactions({
           </button>
         )}
       </div>
+
+      {/* Active Date Filter Notice Banner */}
+      {dateFilter !== 'ALL' && (
+        <div className="px-4 py-2.5 rounded-xl bg-amber-50 border border-amber-200 flex flex-wrap items-center justify-between gap-2 text-xs text-amber-950 no-print">
+          <div className="flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-amber-600 shrink-0" />
+            <span>
+              Showing records filtered for <strong>{getDateFilterLabel()}</strong>: Found{' '}
+              <strong>{unifiedTimeline.length} entries</strong> ({filteredInvoices.length} bills, {stockInList.length} stock in, {stockOutList.length} stock out, {filteredVehicles.length} vehicles).
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setDateFilter('ALL')}
+            className="text-amber-800 hover:text-amber-950 font-bold underline cursor-pointer text-xs flex items-center gap-1"
+          >
+            <span>Show All Records</span>
+            <span>✕</span>
+          </button>
+        </div>
+      )}
 
       {/* ===================================================================== */}
       {/* 3D GLASS FOLDER CARDS VAULT (ANIMATED CRM THEME) */}
@@ -474,7 +797,10 @@ export default function StockTransactions({
                       raw: inv
                     }))
                   : [
-                      { name: "No Invoices Yet", meta: "Create in Billing" }
+                      { 
+                        name: dateFilter !== 'ALL' ? `No Bills on ${getDateFilterLabel()}` : "No Invoices Yet", 
+                        meta: dateFilter !== 'ALL' ? "Filtered Scope" : "Create in Billing" 
+                      }
                     ]
               }
               onFileSelect={(file) => {
@@ -511,7 +837,10 @@ export default function StockTransactions({
                       raw: t
                     }))
                   : [
-                      { name: "Warehouse Inward", meta: "Raw Logs Receipt" }
+                      { 
+                        name: dateFilter !== 'ALL' ? `No Stock In on ${getDateFilterLabel()}` : "Warehouse Inward", 
+                        meta: dateFilter !== 'ALL' ? "Filtered Scope" : "Raw Logs Receipt" 
+                      }
                     ]
               }
               onFileSelect={(file) => {
@@ -539,7 +868,10 @@ export default function StockTransactions({
                       raw: t
                     }))
                   : [
-                      { name: "Outward Dispatches", meta: "Billed Deliveries" }
+                      { 
+                        name: dateFilter !== 'ALL' ? `No Dispatches on ${getDateFilterLabel()}` : "Outward Dispatches", 
+                        meta: dateFilter !== 'ALL' ? "Filtered Scope" : "Billed Deliveries" 
+                      }
                     ]
               }
               onFileSelect={(file) => {
@@ -576,7 +908,10 @@ export default function StockTransactions({
                       raw: v
                     }))
                   : [
-                      { name: "No Vehicles Yet", meta: "Register in Fleet" }
+                      { 
+                        name: dateFilter !== 'ALL' ? `No Fleet Trips on ${getDateFilterLabel()}` : "No Vehicles Yet", 
+                        meta: dateFilter !== 'ALL' ? "Filtered Scope" : "Register in Fleet" 
+                      }
                     ]
               }
               onFileSelect={(file) => {
@@ -621,8 +956,17 @@ export default function StockTransactions({
 
           <div className="divide-y divide-slate-100">
             {unifiedTimeline.length === 0 ? (
-              <div className="py-12 text-center text-slate-400 text-xs">
-                No history records matching filter.
+              <div className="py-12 text-center text-slate-400 text-xs space-y-2">
+                <p>No activity records found for <strong className="text-slate-600">{getDateFilterLabel()}</strong>.</p>
+                {dateFilter !== 'ALL' && (
+                  <button
+                    type="button"
+                    onClick={() => setDateFilter('ALL')}
+                    className="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition cursor-pointer"
+                  >
+                    View All Records
+                  </button>
+                )}
               </div>
             ) : (
               unifiedTimeline.map((item) => (
@@ -761,7 +1105,7 @@ export default function StockTransactions({
                 {filteredInvoices.length === 0 ? (
                   <tr>
                     <td colSpan="8" className="py-10 text-center text-slate-400 text-xs">
-                      No customer bills found.
+                      No customer bills found for <strong className="text-slate-600">{getDateFilterLabel()}</strong>.
                     </td>
                   </tr>
                 ) : (
@@ -881,7 +1225,7 @@ export default function StockTransactions({
                 {stockInList.length === 0 ? (
                   <tr>
                     <td colSpan="8" className="py-10 text-center text-slate-400 text-xs">
-                      No stock inward (Stock In) records found.
+                      No stock inward (Stock In) records found for <strong className="text-slate-600">{getDateFilterLabel()}</strong>.
                     </td>
                   </tr>
                 ) : (
@@ -978,7 +1322,7 @@ export default function StockTransactions({
                 {stockOutList.length === 0 ? (
                   <tr>
                     <td colSpan="8" className="py-10 text-center text-slate-400 text-xs">
-                      No stock dispatch (Stock Out) records found.
+                      No stock dispatch (Stock Out) records found for <strong className="text-slate-600">{getDateFilterLabel()}</strong>.
                     </td>
                   </tr>
                 ) : (
@@ -1074,7 +1418,7 @@ export default function StockTransactions({
                 {filteredVehicles.length === 0 ? (
                   <tr>
                     <td colSpan="7" className="py-10 text-center text-slate-400 text-xs">
-                      No vehicles found.
+                      No fleet vehicles or delivery trips logged for <strong className="text-slate-600">{getDateFilterLabel()}</strong>.
                     </td>
                   </tr>
                 ) : (

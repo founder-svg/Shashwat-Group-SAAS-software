@@ -476,9 +476,11 @@ export default function App() {
               {/* Module 1: Dashboard */}
               {activeTab === 'dashboard' && (
                 <Dashboard
+                  firm={selectedFirm}
                   invoices={invoices}
                   inventory={inventory}
                   transactions={transactions}
+                  vehicles={vehicles}
                   onOpenInvoice={() => setIsInvoiceModalOpen(true)}
                   onOpenStockMovement={openStockModal}
                   onPrintInvoice={openPrintModal}
@@ -499,6 +501,7 @@ export default function App() {
               {/* Module 3: Vehicle Management with Edit & Delete */}
               {activeTab === 'vehicles' && (
                 <VehicleManagement
+                  firm={selectedFirm}
                   vehicles={vehicles}
                   onAddVehicle={handleAddVehicle}
                   onUpdateVehicle={handleUpdateVehicle}
@@ -540,6 +543,7 @@ export default function App() {
               {/* Module 6: DATA (Cloud Storage) with Edit & Delete */}
               {activeTab === 'data' && (
                 <CloudDrive 
+                  firm={selectedFirm}
                   driveFiles={driveFiles} 
                   onUpdateFile={handleUpdateFile}
                   onDeleteFile={handleDeleteFile}
@@ -549,6 +553,7 @@ export default function App() {
               {/* Module 7: History (Audit Log) with Delete Entry */}
               {activeTab === 'history' && (
                 <StockTransactions 
+                  firm={selectedFirm}
                   transactions={transactions} 
                   onDeleteTransaction={handleDeleteTransaction}
                 />

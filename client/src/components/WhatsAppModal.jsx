@@ -42,6 +42,10 @@ export default function WhatsAppModal({ isOpen, onClose, invoice, firm }) {
   const balanceDue = Number(invoice.balance_due || invoice.balanceDue || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 });
   const dateStr = invoice.invoice_date || invoice.invoiceDate || new Date().toISOString().split('T')[0];
 
+  // Determine firm and company title safely
+  const isAshapura = firm?.id === 'shashwat_ashapura_woods' || invoice.firm_id === 'ashapura' || invoice.firm_name?.includes('ASHAPURA') || invoice.company_name?.includes('ASHAPURA');
+  const companyName = firm?.name || (isAshapura ? 'SHASHWAT ASHAPURA WOODS' : 'SHASHWAT WOODS');
+
   // Clean items summary for WhatsApp message
   const items = invoice.items || [];
   const itemsListText = items.length > 0

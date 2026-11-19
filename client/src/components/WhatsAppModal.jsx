@@ -13,6 +13,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { clientMicroPdf } from '../utils/microPdfGenerator';
+import { formatWhatsAppMessage } from '../utils/whatsappUtils';
 
 export default function WhatsAppModal({ isOpen, onClose, invoice, firm }) {
   if (!isOpen || !invoice) return null;
@@ -25,7 +26,16 @@ export default function WhatsAppModal({ isOpen, onClose, invoice, firm }) {
   const [copied, setCopied] = useState(false);
   const [shareStatus, setShareStatus] = useState('');
 
-  const companyName = firm?.name || invoice.firm_name || 'Shashwat Group';
+  // Close modal on Escape key press
+  React.useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
   const invNumber = invoice.invoice_number || invoice.invoiceNumber || 'INV-2026';
   const custName = invoice.customer_name || invoice.customerName || 'Valued Client';
   const totalAmount = Number(invoice.total_amount || invoice.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 });
@@ -44,21 +54,8 @@ export default function WhatsAppModal({ isOpen, onClose, invoice, firm }) {
       }).join('\n')
     : '  1. Wood & Commercial Materials Supply';
 
-  // Structured professional WhatsApp bill message
-  const whatsappMessage = 
-`📄 *TAX INVOICE: ${invNumber}*
-🏢 *${companyName}*
-━━━━━━━━━━━━━━━━━━━━
-👤 *Customer:* ${custName}
-📅 *Date:* ${dateStr}
-💰 *Total Amount:* ₹${totalAmount}
-💳 *Balance Due:* ₹${balanceDue}
-
-📦 *Items Billed:*
-${itemsListText}
-
-📎 *Official Tax Invoice PDF attached.*
-_For any queries or payments, please contact ${companyName}._`;
+  // Structured professional WhatsApp bill message with online PDF download link
+  const whatsappMessage = formatWhatsAppMessage(invoice, companyName);
 
   // Standardize phone for WhatsApp URL (e.g. 9876543210 -> 919876543210)
   const getFormattedPhone = () => {
@@ -146,9 +143,11 @@ _For any queries or payments, please contact ${companyName}._`;
           <button 
             type="button"
             onClick={onClose} 
-            className="text-emerald-100 hover:text-white p-1 rounded-lg transition"
+            className="flex items-center gap-1 px-3 py-1 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-xl shadow-md transition ring-2 ring-red-400/40 cursor-pointer"
+            title="Close (Esc)"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4 stroke-[2.5]" />
+            <span>Close</span>
           </button>
         </div>
 

@@ -78,7 +78,26 @@ class ClientMicroPdfGenerator {
 
     // Table Rows
     let currentY = 660;
-    const items = invoice.items || [];
+    let items = invoice.items || invoice.invoice_items || invoice.line_items || [];
+    if ((!items || items.length === 0) && invoice.notes && invoice.notes.includes('<!--ITEMS:')) {
+      try {
+        const m = invoice.notes.match(/<!--ITEMS:(.*?)-->/);
+        if (m) items = JSON.parse(m[1]);
+      } catch (e) {}
+    }
+    if ((!items || items.length === 0) && Number(invoice.total_amount || invoice.subtotal || 0) > 0) {
+      items = [{
+        itemName: 'Commercial Timber & Wood Materials Supply',
+        vehicleNo: vehNo,
+        length: '-',
+        width: '-',
+        pieces: 1,
+        calculatedSqFt: 0,
+        itemDescription: 'Materials Supply as per Order',
+        specific: 'Commercial Grade',
+        totalPrice: Number(invoice.subtotal || invoice.total_amount || 0)
+      }];
+    }
 
     items.forEach((item, index) => {
       streamCommands.push(`0 0 0 rg`);

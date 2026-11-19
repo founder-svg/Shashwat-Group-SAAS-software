@@ -10,6 +10,17 @@ export default function StockMovementModal({ isOpen, onClose, onSave, inventoryI
   const [partyName, setPartyName] = useState('');
   const [notes, setNotes] = useState('');
 
+  // Close on Escape key press
+  React.useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const isStockIn = type === 'STOCK_IN';
@@ -56,8 +67,14 @@ export default function StockMovementModal({ isOpen, onClose, onSave, inventoryI
               {isStockIn ? 'Stock In (Inward Goods Input)' : 'Stock Out (Dispatch Output)'}
             </h2>
           </div>
-          <button onClick={onClose} className="text-white/80 hover:text-white transition">
-            <X className="w-5 h-5" />
+          <button 
+            type="button"
+            onClick={onClose} 
+            className="flex items-center gap-1 px-3 py-1 bg-black/30 hover:bg-black/50 text-white font-bold text-xs rounded-xl border border-white/20 transition cursor-pointer"
+            title="Close (Esc)"
+          >
+            <X className="w-4 h-4 stroke-[2.5]" />
+            <span>Close</span>
           </button>
         </div>
 

@@ -16,7 +16,9 @@ import InvoiceModal from './components/InvoiceModal';
 import StockMovementModal from './components/StockMovementModal';
 import PrintBillModal from './components/PrintBillModal';
 import WhatsAppModal from './components/WhatsAppModal';
+import PublicBillView from './components/PublicBillView';
 import { clientMicroPdf } from './utils/microPdfGenerator';
+import { formatWhatsAppMessage } from './utils/whatsappUtils';
 
 import { supabase, isConfigured } from './config/supabaseClient';
 import { inventoryService } from './services/inventoryService';
@@ -73,6 +75,31 @@ export default function App() {
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [selectedInvoiceForPrint, setSelectedInvoiceForPrint] = useState(null);
   const [whatsAppModalInvoice, setWhatsAppModalInvoice] = useState(null);
+
+  // Check for public bill viewing link via query params (?bill=... or ?d=...)
+  const [publicBill, setPublicBill] = useState(() => {
+    try {
+      if (typeof window === 'undefined') return null;
+      const params = new URLSearchParams(window.location.search);
+      const encodedData = params.get('d') || params.get('bill_data');
+      if (encodedData) {
+        const decoded = JSON.parse(decodeURIComponent(escape(atob(encodedData))));
+        return decoded;
+      }
+      const billNo = params.get('bill') || params.get('view_bill');
+      if (billNo) {
+        const cached = localStorage.getItem('shashwat_invoices_cache');
+        if (cached) {
+          const list = JSON.parse(cached);
+          const found = list.find(i => (i.invoice_number === billNo || i.id === billNo));
+          if (found) return found;
+        }
+      }
+    } catch (e) {
+      console.warn('Error reading bill from URL:', e);
+    }
+    return null;
+  });
 
   // Initial load when user and firm are active
   useEffect(() => {
@@ -168,10 +195,8 @@ export default function App() {
         let cleanPhone = (invoiceData.whatsappNo || invoiceData.customerPhone || '').replace(/\D/g, '');
         if (cleanPhone.length === 10) cleanPhone = '91' + cleanPhone;
 
-        const custName = res.data.customer_name || 'Valued Client';
-        const invNo = res.data.invoice_number;
-        const total = Number(res.data.total_amount).toFixed(2);
-        const msgText = `📄 *TAX INVOICE & PACKING LIST: ${invNo}*\n🏢 *${selectedFirm?.name || 'Shashwat Group'}*\n━━━━━━━━━━━━━━━━━━━━\n👤 *Customer:* ${custName}\n📅 *Date:* ${res.data.invoice_date}\n💰 *Total Amount:* ₹${total}\n\n📎 *Official Vector PDF file attached & downloaded.*\n_For any queries or dispatches, please contact ${selectedFirm?.name || 'Shashwat Group'}._`;
+        const firmName = selectedFirm?.name || (res.data.customer_name?.includes('Plywood') ? 'SHASHWAT ASHAPURA WOODS' : 'SHASHWAT WOODS');
+        const msgText = formatWhatsAppMessage(res.data, firmName);
 
         const waUrl = cleanPhone 
           ? `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(msgText)}`
@@ -347,6 +372,23 @@ export default function App() {
       setLoading(false);
     }
   };
+
+  // --------------------------------------------------------------------------
+  // PUBLIC BILL VIEWER: When customer opens WhatsApp download/view link
+  // --------------------------------------------------------------------------
+  if (publicBill) {
+    return (
+      <PublicBillView 
+        invoice={publicBill} 
+        onBackToApp={() => {
+          setPublicBill(null);
+          try {
+            window.history.replaceState({}, '', window.location.pathname);
+          } catch (e) {}
+        }} 
+      />
+    );
+  }
 
   // --------------------------------------------------------------------------
   // LAYER 1: Choose Business Division (Shashwat Woods vs Shashwat Ashapura Woods)

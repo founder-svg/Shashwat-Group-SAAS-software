@@ -56,7 +56,8 @@ export const billingService = {
       );
 
       cleanList.forEach(inv => {
-        if (inv.invoice_items && !inv.items) {
+        // 1. Try mapping from invoice_items table
+        if (inv.invoice_items && inv.invoice_items.length > 0 && (!inv.items || inv.items.length === 0)) {
           inv.items = inv.invoice_items.map(it => ({
             ...it,
             itemName: it.item_name,
@@ -71,16 +72,40 @@ export const billingService = {
             totalCft: it.total_cft || 0
           }));
         }
+
+        // 2. Try parsing rich items from embedded notes metadata if items still empty
+        if ((!inv.items || inv.items.length === 0) && inv.notes && inv.notes.includes('<!--ITEMS:')) {
+          try {
+            const match = inv.notes.match(/<!--ITEMS:(.*?)-->/);
+            if (match) {
+              inv.items = JSON.parse(match[1]);
+            }
+          } catch (e) {}
+        }
       });
 
       // Merge cached and remote items (deduplicated by invoice_number)
       const invoiceMap = new Map();
       cached.forEach(i => invoiceMap.set(i.invoice_number || i.id, i));
-      cleanList.forEach(i => invoiceMap.set(i.invoice_number || i.id, i));
+      
+      cleanList.forEach(remoteInv => {
+        const key = remoteInv.invoice_number || remoteInv.id;
+        const cachedInv = invoiceMap.get(key);
+
+        // NEVER let a remote record with 0 items overwrite rich cached items!
+        if (cachedInv && cachedInv.items && cachedInv.items.length > 0 && (!remoteInv.items || remoteInv.items.length === 0)) {
+          remoteInv.items = cachedInv.items;
+        }
+
+        invoiceMap.set(key, remoteInv);
+      });
 
       const merged = Array.from(invoiceMap.values()).sort((a, b) => {
         return new Date(b.invoice_date || 0) - new Date(a.invoice_date || 0);
       });
+
+      // Update cache with merged records to ensure persistence
+      saveCachedInvoices(merged);
 
       return { data: merged, error: null };
     } catch (err) {
@@ -219,7 +244,7 @@ export const billingService = {
           balance_due: totalAmount,
           status: 'ISSUED',
           payment_method: paymentMethod || 'Bank Transfer',
-          notes: notes || null
+          notes: (notes ? `${notes}\n` : '') + `<!--ITEMS:${JSON.stringify(computedItems)}-->`
         };
 
         const { data: invData, error: invErr } = await supabase

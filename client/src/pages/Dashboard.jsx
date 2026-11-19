@@ -1,22 +1,22 @@
 import React from 'react';
-import { 
-  IndianRupee, 
-  Boxes, 
-  AlertTriangle, 
-  ArrowDownRight, 
-  ArrowUpRight, 
-  Receipt, 
-  PlusCircle, 
+import {
+  IndianRupee,
+  Boxes,
+  AlertTriangle,
+  ArrowDownRight,
+  ArrowUpRight,
+  Receipt,
+  PlusCircle,
   HardDrive
 } from 'lucide-react';
 
-export default function Dashboard({ 
-  invoices, 
-  inventory, 
-  transactions, 
-  onOpenInvoice, 
+export default function Dashboard({
+  invoices,
+  inventory,
+  transactions,
+  onOpenInvoice,
   onOpenStockMovement,
-  onPrintInvoice 
+  onPrintInvoice
 }) {
   const totalBilled = invoices.reduce((acc, i) => acc + (Number(i.total_amount) || 0), 0);
   const totalPending = invoices.reduce((acc, i) => acc + (Number(i.balance_due) || 0), 0);
@@ -147,13 +147,12 @@ export default function Dashboard({
                 </div>
                 <div className="text-right">
                   <p className="font-bold text-slate-900">₹{Number(inv.total_amount).toFixed(2)}</p>
-                  <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
-                    inv.status === 'PAID' 
-                      ? 'bg-emerald-100 text-emerald-800' 
-                      : inv.status === 'PARTIALLY_PAID'
+                  <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${inv.status === 'PAID'
+                    ? 'bg-emerald-100 text-emerald-800'
+                    : inv.status === 'PARTIALLY_PAID'
                       ? 'bg-amber-100 text-amber-800'
                       : 'bg-rose-100 text-rose-800'
-                  }`}>
+                    }`}>
                     {inv.status}
                   </span>
                 </div>

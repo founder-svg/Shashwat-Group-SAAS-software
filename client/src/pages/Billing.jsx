@@ -287,8 +287,14 @@ export default function Billing({
               <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                 <CreditCard className="w-4 h-4 text-emerald-600" /> Record Client Payment
               </h3>
-              <button onClick={() => setPayingInvoice(null)} className="text-slate-400 hover:text-slate-600">
-                <X className="w-4 h-4" />
+              <button 
+                type="button"
+                onClick={() => setPayingInvoice(null)} 
+                className="flex items-center gap-1 px-2.5 py-1 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-lg shadow transition ring-1 ring-red-400"
+                title="Close"
+              >
+                <X className="w-3.5 h-3.5 stroke-[2.5]" />
+                <span>Close</span>
               </button>
             </div>
 

@@ -339,8 +339,14 @@ export default function VehicleManagement({
               <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
                 <Truck className="w-5 h-5 text-brand-600" /> Register New Vehicle
               </h3>
-              <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-slate-600">
-                <X className="w-5 h-5" />
+              <button 
+                type="button"
+                onClick={() => setShowAddModal(false)} 
+                className="flex items-center gap-1 px-3 py-1 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-xl shadow transition ring-1 ring-red-400 cursor-pointer"
+                title="Close"
+              >
+                <X className="w-3.5 h-3.5 stroke-[2.5]" />
+                <span>Close</span>
               </button>
             </div>
 
@@ -446,8 +452,14 @@ export default function VehicleManagement({
               <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
                 <Pencil className="w-5 h-5 text-amber-600" /> Edit Vehicle Details
               </h3>
-              <button onClick={() => setEditingVehicle(null)} className="text-slate-400 hover:text-slate-600">
-                <X className="w-5 h-5" />
+              <button 
+                type="button"
+                onClick={() => setEditingVehicle(null)} 
+                className="flex items-center gap-1 px-3 py-1 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-xl shadow transition ring-1 ring-red-400 cursor-pointer"
+                title="Close"
+              >
+                <X className="w-3.5 h-3.5 stroke-[2.5]" />
+                <span>Close</span>
               </button>
             </div>
 

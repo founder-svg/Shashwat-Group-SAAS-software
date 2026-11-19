@@ -736,9 +736,11 @@ export default function ProductManagement({ firm, inventory = [], onAddItem, onU
               <button
                 type="button"
                 onClick={() => setShowAddModal(false)}
-                className="text-slate-400 hover:text-slate-600 p-1"
+                className="flex items-center gap-1 px-3 py-1 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-xl shadow transition ring-1 ring-red-400 cursor-pointer"
+                title="Close"
               >
-                ✕
+                <X className="w-3.5 h-3.5 stroke-[2.5]" />
+                <span>Close</span>
               </button>
             </div>
 
@@ -1134,9 +1136,11 @@ export default function ProductManagement({ firm, inventory = [], onAddItem, onU
               <button
                 type="button"
                 onClick={() => setEditingItem(null)}
-                className="text-slate-400 hover:text-slate-600 p-1"
+                className="flex items-center gap-1 px-3 py-1 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-xl shadow transition ring-1 ring-red-400 cursor-pointer"
+                title="Close"
               >
-                ✕
+                <X className="w-3.5 h-3.5 stroke-[2.5]" />
+                <span>Close</span>
               </button>
             </div>
 

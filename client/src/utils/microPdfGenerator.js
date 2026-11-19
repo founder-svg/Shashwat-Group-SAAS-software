@@ -261,6 +261,420 @@ class ClientMicroPdfGenerator {
     console.log(`✅ [PDF Download] Downloaded ${fileName} (${sizeKB} KB)`);
     return { fileName, sizeKB };
   }
+
+  /**
+   * Generates a valid PDF Blob for Inventory Stock Ledger (< 8 KB)
+   */
+  generateStockPdfBlob({ item, transactions = [], inventory = [], firm }) {
+    const streamCommands = [];
+    const darkColor = '0.08 0.12 0.18';
+    const grayColor = '0.40 0.40 0.40';
+    const lightBg = '0.96 0.97 0.98';
+    const isAshapura = firm?.id === 'shashwat_ashapura_woods' || firm?.name?.toLowerCase().includes('ashapura');
+    const firmName = firm?.name || (isAshapura ? 'SHASHWAT ASHAPURA WOODS' : 'SHASHWAT WOODS');
+    const today = new Date().toISOString().split('T')[0];
+
+    // Top Auspicious
+    streamCommands.push(`0 0 0 rg`);
+    streamCommands.push(`BT /F2 10 Tf 240 818 Td (|| Shree Ganeshay Namah ||) Tj ET`);
+
+    // Top Title Box
+    streamCommands.push(`${darkColor} rg`);
+    streamCommands.push(`40 760 515 50 re f`);
+    streamCommands.push(`1 1 1 rg`);
+    streamCommands.push(`BT /F2 16 Tf 50 790 Td (${this.escapePdfText(firmName)}) Tj ET`);
+    streamCommands.push(`BT /F1 8 Tf 50 772 Td (PLOT NO-163-164, SHOP 1-3, SN-138 NR. VENUS SOCIETY, GANDHIDHAM KUTCH GUJARAT-370205) Tj ET`);
+    streamCommands.push(`BT /F2 8 Tf 390 790 Td (STOCK LEDGER & INVENTORY SHEET) Tj ET`);
+    streamCommands.push(`BT /F1 8 Tf 390 772 Td (Date: ${today} | Verified Audit Record) Tj ET`);
+
+    if (item) {
+      // Single Item Ledger
+      const itemTrans = (transactions || []).filter(t => 
+        (t.item_id && t.item_id === item.id) || 
+        (t.item_name && t.item_name.toLowerCase() === (item.name || '').toLowerCase()) ||
+        (t.sku && t.sku === item.sku)
+      );
+      const totalIn = itemTrans.filter(t => t.transaction_type === 'STOCK_IN').reduce((sum, t) => sum + Number(t.quantity || 0), 0);
+      const totalOut = itemTrans.filter(t => t.transaction_type === 'STOCK_OUT').reduce((sum, t) => sum + Number(t.quantity || 0), 0);
+      const currStock = Number(item.current_stock || 0);
+
+      streamCommands.push(`0 0 0 rg`);
+      streamCommands.push(`BT /F2 12 Tf 40 735 Td (MATERIAL: ${this.escapePdfText(item.name)}) Tj ET`);
+      streamCommands.push(`BT /F1 9 Tf 40 720 Td (SKU: ${this.escapePdfText(item.sku)} | Category: ${this.escapePdfText(item.category || 'General')} | Unit: ${this.escapePdfText(item.unit || 'pcs')}) Tj ET`);
+
+      // 3 Stat Boxes: Stock In, Stock Out, Available Balance
+      streamCommands.push(`0.90 0.98 0.92 rg`);
+      streamCommands.push(`40 660 160 45 re f`);
+      streamCommands.push(`0.1 0.6 0.2 rg`);
+      streamCommands.push(`BT /F2 9 Tf 50 690 Td (TOTAL STOCK IN (+)) Tj ET`);
+      streamCommands.push(`BT /F2 14 Tf 50 670 Td (+${totalIn} ${this.escapePdfText(item.unit || 'pcs')}) Tj ET`);
+
+      streamCommands.push(`0.99 0.92 0.92 rg`);
+      streamCommands.push(`215 660 160 45 re f`);
+      streamCommands.push(`0.8 0.1 0.1 rg`);
+      streamCommands.push(`BT /F2 9 Tf 225 690 Td (TOTAL STOCK OUT (-)) Tj ET`);
+      streamCommands.push(`BT /F2 14 Tf 225 670 Td (-${totalOut} ${this.escapePdfText(item.unit || 'pcs')}) Tj ET`);
+
+      streamCommands.push(`0.92 0.95 0.99 rg`);
+      streamCommands.push(`395 660 160 45 re f`);
+      streamCommands.push(`0.1 0.3 0.8 rg`);
+      streamCommands.push(`BT /F2 9 Tf 405 690 Td (AVAILABLE BALANCE) Tj ET`);
+      streamCommands.push(`BT /F2 14 Tf 405 670 Td (${currStock} ${this.escapePdfText(item.unit || 'pcs')}) Tj ET`);
+
+      // Transactions Table Header
+      streamCommands.push(`${lightBg} rg`);
+      streamCommands.push(`40 625 515 20 re f`);
+      streamCommands.push(`0 0 0 rg`);
+      streamCommands.push(`BT /F2 8 Tf 45 632 Td (Date) Tj ET`);
+      streamCommands.push(`BT /F2 8 Tf 110 632 Td (Movement Type) Tj ET`);
+      streamCommands.push(`BT /F2 8 Tf 200 632 Td (Ref / Voucher) Tj ET`);
+      streamCommands.push(`BT /F2 8 Tf 290 632 Td (Party / Supplier / Client) Tj ET`);
+      streamCommands.push(`BT /F2 8 Tf 430 632 Td (Inward) Tj ET`);
+      streamCommands.push(`BT /F2 8 Tf 480 632 Td (Outward) Tj ET`);
+
+      let currentY = 605;
+      const rows = itemTrans.slice(0, 15);
+      if (rows.length === 0) {
+        streamCommands.push(`${grayColor} rg`);
+        streamCommands.push(`BT /F1 9 Tf 180 590 Td (No stock transactions recorded yet for this item.) Tj ET`);
+      } else {
+        rows.forEach(t => {
+          const tDate = t.created_at ? new Date(t.created_at).toISOString().split('T')[0] : today;
+          const isIn = t.transaction_type === 'STOCK_IN';
+          streamCommands.push(`0.2 0.2 0.2 rg`);
+          streamCommands.push(`BT /F1 8 Tf 45 ${currentY} Td (${tDate}) Tj ET`);
+          streamCommands.push(`BT /F2 8 Tf 110 ${currentY} Td (${isIn ? 'STOCK IN' : 'STOCK OUT'}) Tj ET`);
+          streamCommands.push(`BT /F1 8 Tf 200 ${currentY} Td (${this.escapePdfText((t.reference_number || '-').slice(0, 14))}) Tj ET`);
+          streamCommands.push(`BT /F1 8 Tf 290 ${currentY} Td (${this.escapePdfText((t.party_name || 'Warehouse').slice(0, 24))}) Tj ET`);
+          streamCommands.push(`BT /F2 8 Tf 430 ${currentY} Td (${isIn ? `+${t.quantity}` : '-'}) Tj ET`);
+          streamCommands.push(`BT /F2 8 Tf 480 ${currentY} Td (${!isIn ? `-${t.quantity}` : '-'}) Tj ET`);
+          currentY -= 16;
+        });
+      }
+    } else {
+      // Master Warehouse Sheet
+      streamCommands.push(`0 0 0 rg`);
+      streamCommands.push(`BT /F2 13 Tf 40 735 Td (WAREHOUSE MASTER INVENTORY REGISTER) Tj ET`);
+      streamCommands.push(`BT /F1 9 Tf 40 720 Td (Total Catalog Products: ${inventory.length} | Date: ${today}) Tj ET`);
+
+      // Master Table Header
+      streamCommands.push(`${lightBg} rg`);
+      streamCommands.push(`40 680 515 20 re f`);
+      streamCommands.push(`0 0 0 rg`);
+      streamCommands.push(`BT /F2 8 Tf 45 687 Td (SKU Code) Tj ET`);
+      streamCommands.push(`BT /F2 8 Tf 130 687 Td (Product / Material) Tj ET`);
+      streamCommands.push(`BT /F2 8 Tf 280 687 Td (Category) Tj ET`);
+      streamCommands.push(`BT /F2 8 Tf 410 687 Td (Cost) Tj ET`);
+      streamCommands.push(`BT /F2 8 Tf 460 687 Td (Selling) Tj ET`);
+      streamCommands.push(`BT /F2 8 Tf 510 687 Td (In-Stock) Tj ET`);
+
+      let currentY = 660;
+      inventory.slice(0, 20).forEach(it => {
+        streamCommands.push(`0.2 0.2 0.2 rg`);
+        streamCommands.push(`BT /F2 8 Tf 45 ${currentY} Td (${this.escapePdfText(it.sku)}) Tj ET`);
+        streamCommands.push(`BT /F1 8 Tf 130 ${currentY} Td (${this.escapePdfText(it.name.slice(0, 26))}) Tj ET`);
+        streamCommands.push(`BT /F1 8 Tf 280 ${currentY} Td (${this.escapePdfText((it.category || '').slice(0, 20))}) Tj ET`);
+        streamCommands.push(`BT /F1 8 Tf 410 ${currentY} Td (Rs. ${Number(it.cost_price || 0).toFixed(0)}) Tj ET`);
+        streamCommands.push(`BT /F2 8 Tf 460 ${currentY} Td (Rs. ${Number(it.selling_price || 0).toFixed(0)}) Tj ET`);
+        streamCommands.push(`BT /F2 8 Tf 510 ${currentY} Td (${it.current_stock} ${this.escapePdfText(it.unit || 'pcs')}) Tj ET`);
+        currentY -= 16;
+      });
+    }
+
+    // Bottom Signatory
+    streamCommands.push(`0 0 0 rg`);
+    streamCommands.push(`BT /F2 8.5 Tf 430 80 Td (For ${this.escapePdfText(firmName)}) Tj ET`);
+    streamCommands.push(`BT /F1 8 Tf 430 65 Td (Warehouse In-Charge / Manager) Tj ET`);
+
+    // Bottom Bar
+    streamCommands.push(`${darkColor} rg`);
+    streamCommands.push(`0 0 595 18 re f`);
+    streamCommands.push(`1 1 1 rg`);
+    streamCommands.push(`BT /F1 8 Tf 160 6 Td (${this.escapePdfText(firmName)} - Inventory & Warehouse Management) Tj ET`);
+
+    return this.buildPdfBlob(streamCommands.join('\n'));
+  }
+
+  downloadStockPdf({ item, transactions = [], inventory = [], firm }) {
+    const { blob, sizeKB } = this.generateStockPdfBlob({ item, transactions, inventory, firm });
+    const sku = item ? item.sku : 'Master_Warehouse';
+    const fileName = `Stock_Ledger_${sku}.pdf`;
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    return { fileName, sizeKB, blob };
+  }
+
+  /**
+   * Generates a valid PDF Blob for Vehicle Dispatch Gate Pass (< 8 KB)
+   */
+  generateVehiclePassPdfBlob({ vehicle, firm }) {
+    const streamCommands = [];
+    const darkColor = '0.08 0.12 0.18';
+    const grayColor = '0.40 0.40 0.40';
+    const isAshapura = firm?.id === 'shashwat_ashapura_woods' || firm?.name?.toLowerCase().includes('ashapura');
+    const firmName = firm?.name || (isAshapura ? 'SHASHWAT ASHAPURA WOODS' : 'SHASHWAT WOODS');
+    const today = new Date().toISOString().split('T')[0];
+    const regNo = vehicle.registration_number || vehicle.vehicle_no || 'TRUCK-01';
+
+    // Top Auspicious
+    streamCommands.push(`0 0 0 rg`);
+    streamCommands.push(`BT /F2 10 Tf 240 818 Td (|| Shree Ganeshay Namah ||) Tj ET`);
+
+    // Top Title Box
+    streamCommands.push(`${darkColor} rg`);
+    streamCommands.push(`40 760 515 50 re f`);
+    streamCommands.push(`1 1 1 rg`);
+    streamCommands.push(`BT /F2 16 Tf 50 790 Td (${this.escapePdfText(firmName)}) Tj ET`);
+    streamCommands.push(`BT /F1 8 Tf 50 772 Td (PLOT NO-163-164, SHOP 1-3, SN-138 NR. VENUS SOCIETY, GANDHIDHAM KUTCH GUJARAT-370205) Tj ET`);
+    streamCommands.push(`BT /F2 8 Tf 400 790 Td (VEHICLE LOGISTICS GATE PASS) Tj ET`);
+    streamCommands.push(`BT /F1 8 Tf 400 772 Td (Date: ${today} | Security Verified) Tj ET`);
+
+    // Main Details Box
+    streamCommands.push(`0.96 0.97 0.98 rg`);
+    streamCommands.push(`40 600 515 145 re f`);
+    streamCommands.push(`0.2 0.2 0.2 RG 1 w`);
+    streamCommands.push(`40 600 515 145 re S`);
+
+    streamCommands.push(`0 0 0 rg`);
+    streamCommands.push(`BT /F2 13 Tf 55 725 Td (VEHICLE REGISTRATION: ${this.escapePdfText(regNo)}) Tj ET`);
+    streamCommands.push(`BT /F1 9.5 Tf 55 705 Td (Vehicle Type: ${this.escapePdfText(vehicle.vehicle_type || 'Heavy Duty Commercial Truck')}) Tj ET`);
+    streamCommands.push(`BT /F1 9.5 Tf 55 685 Td (Assigned Driver: ${this.escapePdfText(vehicle.driver_name || 'Designated Driver')}) Tj ET`);
+    streamCommands.push(`BT /F1 9.5 Tf 55 665 Td (Driver Phone / Mobile: ${this.escapePdfText(vehicle.driver_phone || 'N/A')}) Tj ET`);
+    streamCommands.push(`BT /F1 9.5 Tf 55 645 Td (Payload Capacity: ${this.escapePdfText(vehicle.capacity_tons || 15)} Tons) Tj ET`);
+    streamCommands.push(`BT /F2 9.5 Tf 55 625 Td (Current Destination: ${this.escapePdfText(vehicle.current_destination || 'Central Warehouse Base')}) Tj ET`);
+
+    streamCommands.push(`BT /F2 9.5 Tf 340 705 Td (Status: ${this.escapePdfText((vehicle.status || 'AVAILABLE').toUpperCase())}) Tj ET`);
+    streamCommands.push(`BT /F1 9.5 Tf 340 685 Td (Pass Issue Date: ${today}) Tj ET`);
+    streamCommands.push(`BT /F1 9.5 Tf 340 665 Td (Authorized Security Check: PASSED) Tj ET`);
+
+    // Instructions Box
+    streamCommands.push(`0 0 0 rg`);
+    streamCommands.push(`BT /F2 9 Tf 40 560 Td (LOGISTICS & TRANSPORT INSTRUCTIONS:) Tj ET`);
+    streamCommands.push(`${grayColor} rg`);
+    streamCommands.push(`BT /F1 8.5 Tf 40 540 Td (1. The driver must ensure timber / sawn wood materials are securely strapped and tarpaulin-covered.) Tj ET`);
+    streamCommands.push(`BT /F1 8.5 Tf 40 525 Td (2. Gate security inspection and weighbridge slips must be produced upon exit and entry.) Tj ET`);
+    streamCommands.push(`BT /F1 8.5 Tf 40 510 Td (3. Any transit delays or route diversions must be promptly communicated to dispatch control.) Tj ET`);
+
+    // Signatures
+    streamCommands.push(`0 0 0 rg`);
+    streamCommands.push(`BT /F2 8.5 Tf 55 420 Td (Driver Signature) Tj ET`);
+    streamCommands.push(`BT /F2 8.5 Tf 240 420 Td (Security Officer Stamp) Tj ET`);
+    streamCommands.push(`BT /F2 8.5 Tf 430 420 Td (For ${this.escapePdfText(firmName)}) Tj ET`);
+
+    // Bottom Bar
+    streamCommands.push(`${darkColor} rg`);
+    streamCommands.push(`0 0 595 18 re f`);
+    streamCommands.push(`1 1 1 rg`);
+    streamCommands.push(`BT /F1 8 Tf 170 6 Td (${this.escapePdfText(firmName)} - Fleet Logistics & Dispatch) Tj ET`);
+
+    return this.buildPdfBlob(streamCommands.join('\n'));
+  }
+
+  downloadVehiclePassPdf({ vehicle, firm }) {
+    const { blob, sizeKB } = this.generateVehiclePassPdfBlob({ vehicle, firm });
+    const regNo = vehicle.registration_number || vehicle.vehicle_no || 'TRUCK';
+    const fileName = `Vehicle_Pass_${regNo}.pdf`;
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    return { fileName, sizeKB, blob };
+  }
+
+  /**
+   * Generates a valid PDF Blob for Product Specification Sheet (< 8 KB)
+   */
+  generateProductPdfBlob({ product, firm }) {
+    const streamCommands = [];
+    const darkColor = '0.08 0.12 0.18';
+    const isAshapura = firm?.id === 'shashwat_ashapura_woods' || firm?.name?.toLowerCase().includes('ashapura');
+    const firmName = firm?.name || (isAshapura ? 'SHASHWAT ASHAPURA WOODS' : 'SHASHWAT WOODS');
+    const today = new Date().toISOString().split('T')[0];
+
+    streamCommands.push(`0 0 0 rg`);
+    streamCommands.push(`BT /F2 10 Tf 240 818 Td (|| Shree Ganeshay Namah ||) Tj ET`);
+
+    streamCommands.push(`${darkColor} rg`);
+    streamCommands.push(`40 760 515 50 re f`);
+    streamCommands.push(`1 1 1 rg`);
+    streamCommands.push(`BT /F2 16 Tf 50 790 Td (${this.escapePdfText(firmName)}) Tj ET`);
+    streamCommands.push(`BT /F1 8 Tf 50 772 Td (PLOT NO-163-164, SHOP 1-3, SN-138 NR. VENUS SOCIETY, GANDHIDHAM KUTCH GUJARAT-370205) Tj ET`);
+    streamCommands.push(`BT /F2 8 Tf 400 790 Td (PRODUCT SPECIFICATION SHEET) Tj ET`);
+    streamCommands.push(`BT /F1 8 Tf 400 772 Td (Date: ${today} | Standard Commercial Grade) Tj ET`);
+
+    streamCommands.push(`0.96 0.97 0.98 rg`);
+    streamCommands.push(`40 600 515 145 re f`);
+    streamCommands.push(`0.2 0.2 0.2 RG 1 w`);
+    streamCommands.push(`40 600 515 145 re S`);
+
+    streamCommands.push(`0 0 0 rg`);
+    streamCommands.push(`BT /F2 13 Tf 55 725 Td (PRODUCT: ${this.escapePdfText(product.name)}) Tj ET`);
+    streamCommands.push(`BT /F1 9.5 Tf 55 705 Td (SKU Code: ${this.escapePdfText(product.sku)}) Tj ET`);
+    streamCommands.push(`BT /F1 9.5 Tf 55 685 Td (Category: ${this.escapePdfText(product.category || 'General Timber')}) Tj ET`);
+    streamCommands.push(`BT /F1 9.5 Tf 55 665 Td (Item Type: ${this.escapePdfText(product.item_type?.replace('_', ' ') || 'Finished Good')}) Tj ET`);
+    streamCommands.push(`BT /F1 9.5 Tf 55 645 Td (Measurement Unit: ${this.escapePdfText(product.unit || 'pcs')}) Tj ET`);
+    streamCommands.push(`BT /F2 11 Tf 55 625 Td (Standard Selling Price: Rs. ${Number(product.selling_price || 0).toFixed(2)}) Tj ET`);
+
+    streamCommands.push(`BT /F2 9.5 Tf 340 705 Td (Current Stock Balance: ${product.current_stock || 0} ${this.escapePdfText(product.unit || 'pcs')}) Tj ET`);
+    streamCommands.push(`BT /F1 9.5 Tf 340 685 Td (Minimum Reorder Alert: ${product.min_reorder_level || 10}) Tj ET`);
+    streamCommands.push(`BT /F1 9.5 Tf 340 665 Td (Quality Grade: Commercial Grade A) Tj ET`);
+
+    // Bottom Bar
+    streamCommands.push(`${darkColor} rg`);
+    streamCommands.push(`0 0 595 18 re f`);
+    streamCommands.push(`1 1 1 rg`);
+    streamCommands.push(`BT /F1 8 Tf 180 6 Td (${this.escapePdfText(firmName)} - Product Management) Tj ET`);
+
+    return this.buildPdfBlob(streamCommands.join('\n'));
+  }
+
+  downloadProductPdf({ product, firm }) {
+    const { blob, sizeKB } = this.generateProductPdfBlob({ product, firm });
+    const fileName = `Product_Spec_${product.sku || 'Item'}.pdf`;
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    return { fileName, sizeKB, blob };
+  }
+
+  /**
+   * Generates a valid PDF Blob for Dashboard Daily Operations Report (< 8 KB)
+   */
+  generateDashboardPdfBlob({ firm, invoices = [], inventory = [], vehicles = [] }) {
+    const streamCommands = [];
+    const darkColor = '0.08 0.12 0.18';
+    const isAshapura = firm?.id === 'shashwat_ashapura_woods' || firm?.name?.toLowerCase().includes('ashapura');
+    const firmName = firm?.name || (isAshapura ? 'SHASHWAT ASHAPURA WOODS' : 'SHASHWAT WOODS');
+    const today = new Date().toISOString().split('T')[0];
+
+    const totalBilled = invoices.reduce((acc, i) => acc + (Number(i.total_amount) || 0), 0);
+    const totalPending = invoices.reduce((acc, i) => acc + (Number(i.balance_due) || 0), 0);
+    const lowStock = inventory.filter(i => Number(i.current_stock) <= Number(i.min_reorder_level)).length;
+    const activeVehicles = vehicles.filter(v => v.status === 'on_delivery').length;
+
+    streamCommands.push(`0 0 0 rg`);
+    streamCommands.push(`BT /F2 10 Tf 240 818 Td (|| Shree Ganeshay Namah ||) Tj ET`);
+
+    streamCommands.push(`${darkColor} rg`);
+    streamCommands.push(`40 760 515 50 re f`);
+    streamCommands.push(`1 1 1 rg`);
+    streamCommands.push(`BT /F2 16 Tf 50 790 Td (${this.escapePdfText(firmName)}) Tj ET`);
+    streamCommands.push(`BT /F1 8 Tf 50 772 Td (PLOT NO-163-164, SHOP 1-3, SN-138 NR. VENUS SOCIETY, GANDHIDHAM KUTCH GUJARAT-370205) Tj ET`);
+    streamCommands.push(`BT /F2 8 Tf 400 790 Td (DAILY OPERATIONS SUMMARY) Tj ET`);
+    streamCommands.push(`BT /F1 8 Tf 400 772 Td (Date: ${today} | Executive Briefing) Tj ET`);
+
+    // Stat Grid
+    streamCommands.push(`0.96 0.97 0.98 rg`);
+    streamCommands.push(`40 600 515 145 re f`);
+    streamCommands.push(`0.2 0.2 0.2 RG 1 w`);
+    streamCommands.push(`40 600 515 145 re S`);
+
+    streamCommands.push(`0 0 0 rg`);
+    streamCommands.push(`BT /F2 12 Tf 55 725 Td (EXECUTIVE SUMMARY & KEY PERFORMANCE INDICATORS) Tj ET`);
+    streamCommands.push(`BT /F1 9.5 Tf 55 700 Td (Total Commercial Revenue Invoiced: Rs. ${totalBilled.toLocaleString('en-IN', { minimumFractionDigits: 2 })}) Tj ET`);
+    streamCommands.push(`BT /F1 9.5 Tf 55 680 Td (Total Pending Payments / Receivables: Rs. ${totalPending.toLocaleString('en-IN', { minimumFractionDigits: 2 })}) Tj ET`);
+    streamCommands.push(`BT /F1 9.5 Tf 55 660 Td (Total Product Catalog Items: ${inventory.length} items) Tj ET`);
+    streamCommands.push(`BT /F1 9.5 Tf 55 640 Td (Low Stock Reorder Warnings: ${lowStock} items needing replenishment) Tj ET`);
+    streamCommands.push(`BT /F1 9.5 Tf 55 620 Td (Fleet Logistics Status: ${activeVehicles} active deliveries | ${vehicles.length} total vehicles) Tj ET`);
+
+    // Bottom Bar
+    streamCommands.push(`${darkColor} rg`);
+    streamCommands.push(`0 0 595 18 re f`);
+    streamCommands.push(`1 1 1 rg`);
+    streamCommands.push(`BT /F1 8 Tf 180 6 Td (${this.escapePdfText(firmName)} - Command Center Dashboard) Tj ET`);
+
+    return this.buildPdfBlob(streamCommands.join('\n'));
+  }
+
+  downloadDashboardPdf({ firm, invoices = [], inventory = [], vehicles = [] }) {
+    const { blob, sizeKB } = this.generateDashboardPdfBlob({ firm, invoices, inventory, vehicles });
+    const today = new Date().toISOString().split('T')[0];
+    const fileName = `Daily_Operations_Report_${today}.pdf`;
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    return { fileName, sizeKB, blob };
+  }
+
+  /**
+   * Generates a valid PDF Blob for Stock Transaction Movement Voucher (< 8 KB)
+   */
+  generateTransactionPdfBlob({ transaction, firm }) {
+    const streamCommands = [];
+    const darkColor = '0.08 0.12 0.18';
+    const isAshapura = firm?.id === 'shashwat_ashapura_woods' || firm?.name?.toLowerCase().includes('ashapura');
+    const firmName = firm?.name || (isAshapura ? 'SHASHWAT ASHAPURA WOODS' : 'SHASHWAT WOODS');
+    const today = new Date().toISOString().split('T')[0];
+    const isIn = transaction.transaction_type === 'STOCK_IN';
+    const ref = transaction.reference_number || 'VOUCHER-AUTO';
+
+    streamCommands.push(`0 0 0 rg`);
+    streamCommands.push(`BT /F2 10 Tf 240 818 Td (|| Shree Ganeshay Namah ||) Tj ET`);
+
+    streamCommands.push(`${darkColor} rg`);
+    streamCommands.push(`40 760 515 50 re f`);
+    streamCommands.push(`1 1 1 rg`);
+    streamCommands.push(`BT /F2 16 Tf 50 790 Td (${this.escapePdfText(firmName)}) Tj ET`);
+    streamCommands.push(`BT /F1 8 Tf 50 772 Td (PLOT NO-163-164, SHOP 1-3, SN-138 NR. VENUS SOCIETY, GANDHIDHAM KUTCH GUJARAT-370205) Tj ET`);
+    streamCommands.push(`BT /F2 8 Tf 400 790 Td (${isIn ? 'STOCK INWARD RECEIPT' : 'STOCK OUTWARD DISPATCH'}) Tj ET`);
+    streamCommands.push(`BT /F1 8 Tf 400 772 Td (Voucher Ref: ${this.escapePdfText(ref)} | Date: ${today}) Tj ET`);
+
+    streamCommands.push(`0.96 0.97 0.98 rg`);
+    streamCommands.push(`40 600 515 145 re f`);
+    streamCommands.push(`0.2 0.2 0.2 RG 1 w`);
+    streamCommands.push(`40 600 515 145 re S`);
+
+    streamCommands.push(`0 0 0 rg`);
+    streamCommands.push(`BT /F2 13 Tf 55 725 Td (VOUCHER NO: ${this.escapePdfText(ref)}) Tj ET`);
+    streamCommands.push(`BT /F1 9.5 Tf 55 700 Td (Movement Type: ${isIn ? 'STOCK INWARD (RECEIPT)' : 'STOCK OUTWARD (DISPATCH)'}) Tj ET`);
+    streamCommands.push(`BT /F1 9.5 Tf 55 680 Td (Material / Item: ${this.escapePdfText(transaction.item_name || 'Timber Material')}) Tj ET`);
+    streamCommands.push(`BT /F2 11 Tf 55 660 Td (Quantity Moved: ${isIn ? '+' : '-'}${transaction.quantity || 0} units) Tj ET`);
+    streamCommands.push(`BT /F1 9.5 Tf 55 640 Td (Party / Supplier / Consignee: ${this.escapePdfText(transaction.party_name || 'Warehouse Operations')}) Tj ET`);
+    streamCommands.push(`BT /F1 9.5 Tf 55 620 Td (Notes / Remarks: ${this.escapePdfText(transaction.notes || 'No special notes recorded')}) Tj ET`);
+
+    // Bottom Bar
+    streamCommands.push(`${darkColor} rg`);
+    streamCommands.push(`0 0 595 18 re f`);
+    streamCommands.push(`1 1 1 rg`);
+    streamCommands.push(`BT /F1 8 Tf 180 6 Td (${this.escapePdfText(firmName)} - Stock Audit Log) Tj ET`);
+
+    return this.buildPdfBlob(streamCommands.join('\n'));
+  }
+
+  downloadTransactionPdf({ transaction, firm }) {
+    const { blob, sizeKB } = this.generateTransactionPdfBlob({ transaction, firm });
+    const ref = transaction.reference_number || 'VOUCHER';
+    const fileName = `Stock_Voucher_${ref}.pdf`;
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    return { fileName, sizeKB, blob };
+  }
 }
 
 export const clientMicroPdf = new ClientMicroPdfGenerator();

@@ -15,6 +15,7 @@ import {
   X
 } from 'lucide-react';
 import { moduleWhatsApp } from '../utils/moduleWhatsAppSharer';
+import WhatsAppModal from '../components/WhatsAppModal';
 
 export default function VehicleManagement({ 
   firm,
@@ -28,6 +29,7 @@ export default function VehicleManagement({
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState(null);
+  const [whatsAppVehicle, setWhatsAppVehicle] = useState(null);
 
   // Form State for Add
   const [vehicleNumber, setVehicleNumber] = useState('');
@@ -265,7 +267,7 @@ export default function VehicleManagement({
                     {/* WhatsApp Pass, Edit & Delete Action Buttons */}
                     <button
                       type="button"
-                      onClick={() => moduleWhatsApp.shareVehiclePass(firm, v)}
+                      onClick={() => setWhatsAppVehicle(v)}
                       className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition cursor-pointer"
                       title="Send Vehicle Pass & Trip Details to Driver on WhatsApp"
                     >
@@ -600,6 +602,16 @@ export default function VehicleManagement({
             </form>
           </div>
         </div>
+      )}
+      {/* WhatsApp Modal for Vehicle Gate Pass */}
+      {whatsAppVehicle && (
+        <WhatsAppModal
+          isOpen={Boolean(whatsAppVehicle)}
+          onClose={() => setWhatsAppVehicle(null)}
+          type="vehicle"
+          data={whatsAppVehicle}
+          firm={firm}
+        />
       )}
     </div>
   );

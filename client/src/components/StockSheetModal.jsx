@@ -23,7 +23,8 @@ export default function StockSheetModal({
   item = null, 
   inventory = [], 
   transactions = [], 
-  firm 
+  firm,
+  onOpenWhatsAppModal 
 }) {
   // Close on Escape key press
   useEffect(() => {
@@ -91,6 +92,11 @@ export default function StockSheetModal({
 
   // WhatsApp Dispatch
   const handleWhatsAppSend = () => {
+    if (onOpenWhatsAppModal) {
+      onOpenWhatsAppModal(item ? { type: 'inventory', data: { item, transactions } } : { type: 'inventory_master', data: { inventory, transactions } });
+      onClose();
+      return;
+    }
     let msg = '';
     if (item && singleStats) {
       msg = `📊 *STOCK MOVEMENT LEDGER SHEET*\n🏢 *${companyTitle}*\n━━━━━━━━━━━━━━━━━━━━\n📦 *Item:* ${item.name} (${item.sku})\n📂 *Category:* ${item.category || 'General'}\n📅 *Date:* ${currentDate}\n\n📥 *Total Stock In:* +${singleStats.totalIn} ${item.unit || 'pcs'}\n📤 *Total Stock Out:* -${singleStats.totalOut} ${item.unit || 'pcs'}\n⚖️ *Available Balance:* ${singleStats.currentStock} ${item.unit || 'pcs'}\n\n_Official Warehouse Stock Report from ${companyTitle}._`;
@@ -102,8 +108,8 @@ export default function StockSheetModal({
   };
 
   const handleDownloadPdf = () => {
-    // Generate printed/pdf sheet using browser print-to-pdf or microPdf
-    window.print();
+    // Generate vector PDF directly with microPdf
+    clientMicroPdf.downloadStockPdf({ item, transactions, inventory, firm });
   };
 
   return (

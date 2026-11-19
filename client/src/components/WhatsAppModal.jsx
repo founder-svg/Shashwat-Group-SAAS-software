@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   X, 
   Send, 
@@ -15,19 +15,128 @@ import {
 import { clientMicroPdf } from '../utils/microPdfGenerator';
 import { formatWhatsAppMessage } from '../utils/whatsappUtils';
 
-export default function WhatsAppModal({ isOpen, onClose, invoice, firm }) {
-  if (!isOpen || !invoice) return null;
+export default function WhatsAppModal({ 
+  isOpen, 
+  onClose, 
+  invoice = null, 
+  type = 'invoice', // 'invoice' | 'inventory' | 'inventory_master' | 'vehicle' | 'product' | 'dashboard' | 'transaction' | 'drive'
+  data = null,
+  firm = null 
+}) {
+  if (!isOpen) return null;
 
-  // Clean initial phone number
-  const initialPhone = (invoice.customer_phone || invoice.customerPhone || '')
-    .replace(/[^\d+]/g, '');
+  // Determine active document payload
+  const activePayload = invoice || data;
+  if (!activePayload) return null;
+
+  const isAshapura = firm?.id === 'shashwat_ashapura_woods' || 
+    (invoice && (invoice.firm_id === 'ashapura' || invoice.firm_name?.includes('ASHAPURA') || invoice.company_name?.includes('ASHAPURA')));
+  const companyName = firm?.name || (isAshapura ? 'SHASHWAT ASHAPURA WOODS' : 'SHASHWAT WOODS');
+  const today = new Date().toISOString().split('T')[0];
+
+  // Configure metadata based on modal type
+  let title = 'Send Invoice Bill to WhatsApp';
+  let subtitle = 'Dispatches vector PDF bill (under 8 KB) directly to WhatsApp';
+  let fileName = 'Document.pdf';
+  let initialPhone = '';
+  let whatsappMessage = '';
+  let generateBlobFn = () => clientMicroPdf.generateInvoicePdfBlob(activePayload);
+  let downloadFn = () => clientMicroPdf.downloadInvoicePdf(activePayload);
+
+  if (type === 'invoice' || invoice) {
+    const inv = invoice || activePayload;
+    const invNo = inv.invoice_number || inv.invoiceNumber || 'INV-2026';
+    title = 'Send Invoice Bill to WhatsApp';
+    subtitle = 'Dispatches vector PDF bill (under 8 KB) directly to WhatsApp';
+    fileName = `Invoice_${invNo}.pdf`;
+    initialPhone = (inv.customer_phone || inv.customerPhone || inv.whatsapp_no || inv.whatsappNo || '').replace(/[^\d+]/g, '');
+    whatsappMessage = formatWhatsAppMessage(inv, companyName);
+    generateBlobFn = () => clientMicroPdf.generateInvoicePdfBlob(inv);
+    downloadFn = () => clientMicroPdf.downloadInvoicePdf(inv);
+  } else if (type === 'inventory') {
+    const { item, transactions = [] } = activePayload;
+    const sku = item?.sku || 'SKU';
+    title = `Send Stock Ledger to WhatsApp (${sku})`;
+    subtitle = 'Dispatches vector Stock Movement Ledger PDF directly to WhatsApp';
+    fileName = `Stock_Ledger_${sku}.pdf`;
+    initialPhone = (item?.phone || '').replace(/[^\d+]/g, '');
+    generateBlobFn = () => clientMicroPdf.generateStockPdfBlob({ item, transactions, firm });
+    downloadFn = () => clientMicroPdf.downloadStockPdf({ item, transactions, firm });
+    
+    const itemTrans = (transactions || []).filter(t => 
+      (t.item_id && t.item_id === item?.id) || 
+      (t.item_name && t.item_name.toLowerCase() === (item?.name || '').toLowerCase()) ||
+      (t.sku && t.sku === item?.sku)
+    );
+    const totalIn = itemTrans.filter(t => t.transaction_type === 'STOCK_IN').reduce((sum, t) => sum + Number(t.quantity || 0), 0);
+    const totalOut = itemTrans.filter(t => t.transaction_type === 'STOCK_OUT').reduce((sum, t) => sum + Number(t.quantity || 0), 0);
+
+    whatsappMessage = `📊 *STOCK MOVEMENT LEDGER REPORT*\n🏢 *${companyName}*\n━━━━━━━━━━━━━━━━━━━━\n📦 *Item:* ${item?.name} (${sku})\n📂 *Category:* ${item?.category || 'General Timber'}\n📅 *Date:* ${today}\n\n📥 *Total Stock In:* +${totalIn} ${item?.unit || 'pcs'}\n📤 *Total Stock Out:* -${totalOut} ${item?.unit || 'pcs'}\n⚖️ *Available Balance:* ${item?.current_stock} ${item?.unit || 'pcs'}\n💰 *Selling Rate:* ₹${Number(item?.selling_price || 0).toFixed(2)}\n\n📎 *Official Vector PDF attached & downloaded.*`;
+  } else if (type === 'inventory_master') {
+    const { inventory = [], transactions = [] } = activePayload;
+    title = 'Send Warehouse Master Stock Sheet to WhatsApp';
+    subtitle = 'Dispatches Warehouse Inventory Master PDF directly to WhatsApp';
+    fileName = 'Warehouse_Master_Stock_Sheet.pdf';
+    generateBlobFn = () => clientMicroPdf.generateStockPdfBlob({ item: null, transactions, inventory, firm });
+    downloadFn = () => clientMicroPdf.downloadStockPdf({ item: null, transactions, inventory, firm });
+    
+    whatsappMessage = `📊 *WAREHOUSE MASTER INVENTORY REGISTER*\n🏢 *${companyName}*\n━━━━━━━━━━━━━━━━━━━━\n📅 *Date:* ${today}\n📦 *Total Listed Materials:* ${inventory.length}\n⚖️ *Net In-Stock Balance:* ${inventory.reduce((sum, it) => sum + Number(it.current_stock || 0), 0)} items\n\n📎 *Official Vector PDF attached & downloaded.*`;
+  } else if (type === 'vehicle') {
+    const v = activePayload;
+    const regNo = v.registration_number || v.vehicle_no || 'TRUCK-01';
+    title = `Send Vehicle Pass to WhatsApp (${regNo})`;
+    subtitle = 'Dispatches official Transport Gate Pass PDF directly to WhatsApp';
+    fileName = `Vehicle_Pass_${regNo}.pdf`;
+    initialPhone = (v.driver_phone || '').replace(/[^\d+]/g, '');
+    generateBlobFn = () => clientMicroPdf.generateVehiclePassPdfBlob({ vehicle: v, firm });
+    downloadFn = () => clientMicroPdf.downloadVehiclePassPdf({ vehicle: v, firm });
+
+    whatsappMessage = `🚛 *VEHICLE DISPATCH GATE PASS*\n🏢 *${companyName}*\n━━━━━━━━━━━━━━━━━━━━\n🚚 *Vehicle No:* ${regNo}\n👤 *Driver:* ${v.driver_name || 'Designated Driver'} (${v.driver_phone || 'N/A'})\n📍 *Destination:* ${v.current_destination || 'Central Warehouse Base'}\n📋 *Status:* ${(v.status || 'AVAILABLE').toUpperCase()}\n📅 *Date:* ${today}\n\n📎 *Official Vector Gate Pass PDF attached & downloaded.*`;
+  } else if (type === 'product') {
+    const p = activePayload;
+    title = `Send Product Spec to WhatsApp (${p.sku})`;
+    subtitle = 'Dispatches Product Spec Sheet PDF directly to WhatsApp';
+    fileName = `Product_Spec_${p.sku}.pdf`;
+    generateBlobFn = () => clientMicroPdf.generateProductPdfBlob({ product: p, firm });
+    downloadFn = () => clientMicroPdf.downloadProductPdf({ product: p, firm });
+
+    whatsappMessage = `🌲 *PRODUCT SPECIFICATION SHEET*\n🏢 *${companyName}*\n━━━━━━━━━━━━━━━━━━━━\n📦 *Product:* ${p.name}\n🔖 *SKU Code:* ${p.sku}\n📂 *Category:* ${p.category || 'Timber'}\n💵 *Price:* ₹${Number(p.selling_price || 0).toFixed(2)}\n⚖️ *Available:* ${p.current_stock || 0} ${p.unit || 'pcs'}\n📅 *Date:* ${today}\n\n📎 *Official Vector PDF attached & downloaded.*`;
+  } else if (type === 'dashboard') {
+    const { invoices = [], inventory = [], vehicles = [] } = activePayload;
+    title = 'Send Daily Operations Report to WhatsApp';
+    subtitle = 'Dispatches Executive KPI Summary PDF directly to WhatsApp';
+    fileName = `Executive_Report_${today}.pdf`;
+    generateBlobFn = () => clientMicroPdf.generateDashboardPdfBlob({ firm, invoices, inventory, vehicles });
+    downloadFn = () => clientMicroPdf.downloadDashboardPdf({ firm, invoices, inventory, vehicles });
+
+    const totalBilled = invoices.reduce((acc, i) => acc + (Number(i.total_amount) || 0), 0);
+    const totalPending = invoices.reduce((acc, i) => acc + (Number(i.balance_due) || 0), 0);
+    whatsappMessage = `📊 *EXECUTIVE DAILY OPERATIONS REPORT*\n🏢 *${companyName}*\n━━━━━━━━━━━━━━━━━━━━\n📅 *Date:* ${today}\n💰 *Total Billed:* ₹${totalBilled.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n⏳ *Outstanding Balance:* ₹${totalPending.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n📦 *Catalog Items:* ${inventory.length}\n🚛 *Fleet Active:* ${vehicles.filter(v => v.status === 'on_delivery').length}\n\n📎 *Official Vector PDF attached & downloaded.*`;
+  } else if (type === 'transaction') {
+    const t = activePayload;
+    const ref = t.reference_number || 'VOUCHER';
+    title = `Send Movement Voucher to WhatsApp (${ref})`;
+    subtitle = 'Dispatches Material Movement Voucher PDF directly to WhatsApp';
+    fileName = `Stock_Voucher_${ref}.pdf`;
+    generateBlobFn = () => clientMicroPdf.generateTransactionPdfBlob({ transaction: t, firm });
+    downloadFn = () => clientMicroPdf.downloadTransactionPdf({ transaction: t, firm });
+
+    const isIn = t.transaction_type === 'STOCK_IN';
+    whatsappMessage = `🧾 *STOCK MOVEMENT VOUCHER: ${ref}*\n🏢 *${companyName}*\n━━━━━━━━━━━━━━━━━━━━\n🔄 *Movement:* ${isIn ? 'STOCK INWARD (RECEIPT)' : 'STOCK OUTWARD (DISPATCH)'}\n📦 *Material:* ${t.item_name || 'Timber'}\n📊 *Quantity:* ${t.quantity || 0} units\n🏢 *Party:* ${t.party_name || 'Warehouse Operations'}\n📅 *Date:* ${today}\n\n📎 *Official Vector PDF attached & downloaded.*`;
+  } else if (type === 'drive') {
+    const f = activePayload;
+    title = 'Send Document Archive Slip to WhatsApp';
+    subtitle = 'Dispatches Cloud Document Archive Slip directly to WhatsApp';
+    fileName = `Document_${f.name || 'Archive'}.pdf`;
+    whatsappMessage = `📁 *OFFICIAL DOCUMENT ARCHIVE NOTICE*\n🏢 *${companyName}*\n━━━━━━━━━━━━━━━━━━━━\n📄 *Document:* ${f.name}\n📂 *Folder:* ${f.category || 'General'}\n📅 *Archived Date:* ${f.upload_date || today}\n\n📎 *Official Document Record - ${companyName}.*`;
+  }
 
   const [phone, setPhone] = useState(initialPhone);
   const [copied, setCopied] = useState(false);
   const [shareStatus, setShareStatus] = useState('');
 
   // Close modal on Escape key press
-  React.useEffect(() => {
+  useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape' && isOpen) {
         onClose();
@@ -36,36 +145,12 @@ export default function WhatsAppModal({ isOpen, onClose, invoice, firm }) {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
-  const invNumber = invoice.invoice_number || invoice.invoiceNumber || 'INV-2026';
-  const custName = invoice.customer_name || invoice.customerName || 'Valued Client';
-  const totalAmount = Number(invoice.total_amount || invoice.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 });
-  const balanceDue = Number(invoice.balance_due || invoice.balanceDue || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 });
-  const dateStr = invoice.invoice_date || invoice.invoiceDate || new Date().toISOString().split('T')[0];
-
-  // Determine firm and company title safely
-  const isAshapura = firm?.id === 'shashwat_ashapura_woods' || invoice.firm_id === 'ashapura' || invoice.firm_name?.includes('ASHAPURA') || invoice.company_name?.includes('ASHAPURA');
-  const companyName = firm?.name || (isAshapura ? 'SHASHWAT ASHAPURA WOODS' : 'SHASHWAT WOODS');
-
-  // Clean items summary for WhatsApp message
-  const items = invoice.items || [];
-  const itemsListText = items.length > 0
-    ? items.slice(0, 6).map((it, idx) => {
-        const name = it.item_name || it.itemName || 'Timber Item';
-        const pcs = it.pieces || it.quantity || 1;
-        const vol = it.total_cft || it.totalCft || it.cft || 0;
-        const volStr = vol > 0 ? ` (${vol} CFT)` : '';
-        return `  ${idx + 1}. *${name}* - ${pcs} Pcs${volStr}`;
-      }).join('\n')
-    : '  1. Wood & Commercial Materials Supply';
-
-  // Structured professional WhatsApp bill message with online PDF download link
-  const whatsappMessage = formatWhatsAppMessage(invoice, companyName);
 
   // Standardize phone for WhatsApp URL (e.g. 9876543210 -> 919876543210)
   const getFormattedPhone = () => {
-    let clean = phone.replace(/\D/g, '');
+    let clean = (phone || '').replace(/\D/g, '');
     if (clean.length === 10) {
-      clean = '91' + clean; // Prepend India country code if 10 digits
+      clean = '91' + clean;
     }
     return clean;
   };
@@ -76,14 +161,13 @@ export default function WhatsAppModal({ isOpen, onClose, invoice, firm }) {
   const handleDirectPdfShare = async () => {
     setShareStatus('generating');
     try {
-      const { blob } = clientMicroPdf.generateInvoicePdfBlob(invoice);
-      const fileName = `Invoice_${invNumber}.pdf`;
+      const { blob } = generateBlobFn();
       const pdfFile = new File([blob], fileName, { type: 'application/pdf' });
 
       // Check if browser supports Web Share API with Files
       if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
         await navigator.share({
-          title: `Invoice ${invNumber} - ${companyName}`,
+          title: fileName,
           text: whatsappMessage,
           files: [pdfFile]
         });
@@ -108,9 +192,9 @@ export default function WhatsAppModal({ isOpen, onClose, invoice, firm }) {
    */
   const handleDownloadAndLaunchWhatsApp = () => {
     // 1. Download PDF file directly so user has the .pdf file ready
-    clientMicroPdf.downloadInvoicePdf(invoice);
+    downloadFn();
 
-    // 2. Open WhatsApp chat with pre-filled invoice message
+    // 2. Open WhatsApp chat with pre-filled message
     const targetPhone = getFormattedPhone();
     const encodedText = encodeURIComponent(whatsappMessage);
     const whatsappUrl = targetPhone 
@@ -129,7 +213,7 @@ export default function WhatsAppModal({ isOpen, onClose, invoice, firm }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden my-6">
+      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden my-6 animate-in fade-in zoom-in-95 duration-150">
         {/* Header */}
         <div className="bg-emerald-700 text-white px-5 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-2.5">
@@ -140,14 +224,15 @@ export default function WhatsAppModal({ isOpen, onClose, invoice, firm }) {
               </svg>
             </div>
             <div>
-              <h3 className="text-base font-black tracking-tight">Send Invoice Bill to WhatsApp</h3>
-              <p className="text-[11px] text-emerald-100">Dispatches vector PDF bill (under 8 KB) directly to WhatsApp</p>
+              <h3 className="text-base font-black tracking-tight">{title}</h3>
+              <p className="text-[11px] text-emerald-100">{subtitle}</p>
             </div>
           </div>
+          {/* HIGH-VISIBILITY RED CLOSE BUTTON */}
           <button 
             type="button"
             onClick={onClose} 
-            className="flex items-center gap-1 px-3 py-1 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-xl shadow-md transition ring-2 ring-red-400/40 cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-xl shadow-md transition ring-2 ring-red-400/40 cursor-pointer"
             title="Close (Esc)"
           >
             <X className="w-4 h-4 stroke-[2.5]" />
@@ -160,7 +245,7 @@ export default function WhatsAppModal({ isOpen, onClose, invoice, firm }) {
           {/* Recipient Phone Input */}
           <div>
             <label className="block text-xs font-bold text-slate-800 mb-1 flex items-center justify-between">
-              <span>Customer WhatsApp Phone Number *</span>
+              <span>Recipient WhatsApp Phone Number *</span>
               <span className="text-[10px] text-slate-400 font-normal">Include country code (e.g. +91)</span>
             </label>
             <div className="relative">
@@ -183,7 +268,7 @@ export default function WhatsAppModal({ isOpen, onClose, invoice, firm }) {
                 <FileText className="w-4 h-4" />
               </div>
               <div>
-                <p className="font-bold text-slate-900">Invoice_{invNumber}.pdf</p>
+                <p className="font-bold text-slate-900">{fileName}</p>
                 <p className="text-[11px] text-emerald-700 font-medium">
                   Micro-PDF Vector Attachment • ~5.4 KB • Verified Standard
                 </p>
@@ -191,8 +276,8 @@ export default function WhatsAppModal({ isOpen, onClose, invoice, firm }) {
             </div>
             <button
               type="button"
-              onClick={() => clientMicroPdf.downloadInvoicePdf(invoice)}
-              className="p-1.5 text-slate-500 hover:text-emerald-700 hover:bg-emerald-100 rounded-lg transition"
+              onClick={downloadFn}
+              className="p-1.5 text-slate-500 hover:text-emerald-700 hover:bg-emerald-100 rounded-lg transition cursor-pointer"
               title="Download local copy of PDF"
             >
               <Download className="w-4 h-4" />
@@ -208,7 +293,7 @@ export default function WhatsAppModal({ isOpen, onClose, invoice, firm }) {
               <button
                 type="button"
                 onClick={handleCopyText}
-                className="text-[11px] font-semibold text-emerald-700 hover:underline flex items-center gap-1"
+                className="text-[11px] font-semibold text-emerald-700 hover:underline flex items-center gap-1 cursor-pointer"
               >
                 <Copy className="w-3 h-3" />
                 <span>{copied ? 'Copied!' : 'Copy Text'}</span>
@@ -223,7 +308,7 @@ export default function WhatsAppModal({ isOpen, onClose, invoice, firm }) {
           {shareStatus === 'shared' && (
             <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>Bill PDF dispatched to WhatsApp successfully!</span>
+              <span>PDF dispatched to WhatsApp successfully!</span>
             </div>
           )}
 
@@ -232,7 +317,7 @@ export default function WhatsAppModal({ isOpen, onClose, invoice, firm }) {
               <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
               <div>
                 <p className="font-bold">PDF file downloaded &amp; WhatsApp chat opened!</p>
-                <p className="text-[10px] text-blue-600">The PDF is now in your downloads. Simply drag or attach the downloaded invoice into the WhatsApp chat.</p>
+                <p className="text-[10px] text-blue-600">The PDF is now in your downloads folder. Simply drag or attach the downloaded PDF file into the WhatsApp chat.</p>
               </div>
             </div>
           )}
@@ -242,7 +327,7 @@ export default function WhatsAppModal({ isOpen, onClose, invoice, firm }) {
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 border border-slate-200 text-slate-600 rounded-xl font-bold hover:bg-slate-50 transition"
+              className="px-4 py-2 border border-slate-200 text-slate-600 rounded-xl font-bold hover:bg-slate-50 transition cursor-pointer"
             >
               Close
             </button>
@@ -251,10 +336,10 @@ export default function WhatsAppModal({ isOpen, onClose, invoice, firm }) {
             <button
               type="button"
               onClick={handleDirectPdfShare}
-              className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold transition flex items-center justify-center gap-2 shadow-md shadow-emerald-700/20"
+              className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold transition flex items-center justify-center gap-2 shadow-md shadow-emerald-700/20 cursor-pointer"
             >
               <Send className="w-4 h-4" />
-              <span>Send PDF Bill to WhatsApp</span>
+              <span>Send PDF to WhatsApp</span>
             </button>
           </div>
         </div>

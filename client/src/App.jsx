@@ -494,6 +494,7 @@ export default function App() {
                 <Inventory
                   firm={selectedFirm}
                   inventory={inventory}
+                  transactions={transactions}
                   onOpenMovement={openStockModal}
                   onAddItem={handleAddItem}
                   onUpdateItem={handleUpdateItem}

@@ -120,7 +120,16 @@ export default function InvoiceModal({
     }
   }, [invoiceToEdit, isOpen]);
 
-  if (!isOpen) return null;
+  // Close modal on Escape key press
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   // Client's exact formula: length X width X peace / 144 = total sq.ft
   function calculateSqFtFormula(len, wid, pcs) {
@@ -287,21 +296,12 @@ export default function InvoiceModal({
     onClose();
   };
 
-  // Close modal on Escape key press
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape' && isOpen) {
-        onClose();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
-
   const handleSubmit = (e) => {
     e.preventDefault();
     processFormSubmit(false);
   };
+
+  if (!isOpen) return null;
 
   return (
     <div 

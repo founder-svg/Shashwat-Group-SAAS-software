@@ -23,115 +23,10 @@ export default function WhatsAppModal({
   data = null,
   firm = null 
 }) {
-  if (!isOpen) return null;
-
-  // Determine active document payload
-  const activePayload = invoice || data;
-  if (!activePayload) return null;
-
-  const isAshapura = firm?.id === 'shashwat_ashapura_woods' || 
-    (invoice && (invoice.firm_id === 'ashapura' || invoice.firm_name?.includes('ASHAPURA') || invoice.company_name?.includes('ASHAPURA')));
-  const companyName = firm?.name || (isAshapura ? 'SHASHWAT ASHAPURA WOODS' : 'SHASHWAT WOODS');
-  const today = new Date().toISOString().split('T')[0];
-
-  // Configure metadata based on modal type
-  let title = 'Send Invoice Bill to WhatsApp';
-  let subtitle = 'Dispatches vector PDF bill (under 8 KB) directly to WhatsApp';
-  let fileName = 'Document.pdf';
-  let initialPhone = '';
-  let whatsappMessage = '';
-  let generateBlobFn = () => clientMicroPdf.generateInvoicePdfBlob(activePayload);
-  let downloadFn = () => clientMicroPdf.downloadInvoicePdf(activePayload);
-
-  if (type === 'invoice' || invoice) {
-    const inv = invoice || activePayload;
-    const invNo = inv.invoice_number || inv.invoiceNumber || 'INV-2026';
-    title = 'Send Invoice Bill to WhatsApp';
-    subtitle = 'Dispatches vector PDF bill (under 8 KB) directly to WhatsApp';
-    fileName = `Invoice_${invNo}.pdf`;
-    initialPhone = (inv.customer_phone || inv.customerPhone || inv.whatsapp_no || inv.whatsappNo || '').replace(/[^\d+]/g, '');
-    whatsappMessage = formatWhatsAppMessage(inv, companyName);
-    generateBlobFn = () => clientMicroPdf.generateInvoicePdfBlob(inv);
-    downloadFn = () => clientMicroPdf.downloadInvoicePdf(inv);
-  } else if (type === 'inventory') {
-    const { item, transactions = [] } = activePayload;
-    const sku = item?.sku || 'SKU';
-    title = `Send Stock Ledger to WhatsApp (${sku})`;
-    subtitle = 'Dispatches vector Stock Movement Ledger PDF directly to WhatsApp';
-    fileName = `Stock_Ledger_${sku}.pdf`;
-    initialPhone = (item?.phone || '').replace(/[^\d+]/g, '');
-    generateBlobFn = () => clientMicroPdf.generateStockPdfBlob({ item, transactions, firm });
-    downloadFn = () => clientMicroPdf.downloadStockPdf({ item, transactions, firm });
-    
-    const itemTrans = (transactions || []).filter(t => 
-      (t.item_id && t.item_id === item?.id) || 
-      (t.item_name && t.item_name.toLowerCase() === (item?.name || '').toLowerCase()) ||
-      (t.sku && t.sku === item?.sku)
-    );
-    const totalIn = itemTrans.filter(t => t.transaction_type === 'STOCK_IN').reduce((sum, t) => sum + Number(t.quantity || 0), 0);
-    const totalOut = itemTrans.filter(t => t.transaction_type === 'STOCK_OUT').reduce((sum, t) => sum + Number(t.quantity || 0), 0);
-
-    whatsappMessage = `📊 *STOCK MOVEMENT LEDGER REPORT*\n🏢 *${companyName}*\n━━━━━━━━━━━━━━━━━━━━\n📦 *Item:* ${item?.name} (${sku})\n📂 *Category:* ${item?.category || 'General Timber'}\n📅 *Date:* ${today}\n\n📥 *Total Stock In:* +${totalIn} ${item?.unit || 'pcs'}\n📤 *Total Stock Out:* -${totalOut} ${item?.unit || 'pcs'}\n⚖️ *Available Balance:* ${item?.current_stock} ${item?.unit || 'pcs'}\n💰 *Selling Rate:* ₹${Number(item?.selling_price || 0).toFixed(2)}\n\n📎 *Official Vector PDF attached & downloaded.*`;
-  } else if (type === 'inventory_master') {
-    const { inventory = [], transactions = [] } = activePayload;
-    title = 'Send Warehouse Master Stock Sheet to WhatsApp';
-    subtitle = 'Dispatches Warehouse Inventory Master PDF directly to WhatsApp';
-    fileName = 'Warehouse_Master_Stock_Sheet.pdf';
-    generateBlobFn = () => clientMicroPdf.generateStockPdfBlob({ item: null, transactions, inventory, firm });
-    downloadFn = () => clientMicroPdf.downloadStockPdf({ item: null, transactions, inventory, firm });
-    
-    whatsappMessage = `📊 *WAREHOUSE MASTER INVENTORY REGISTER*\n🏢 *${companyName}*\n━━━━━━━━━━━━━━━━━━━━\n📅 *Date:* ${today}\n📦 *Total Listed Materials:* ${inventory.length}\n⚖️ *Net In-Stock Balance:* ${inventory.reduce((sum, it) => sum + Number(it.current_stock || 0), 0)} items\n\n📎 *Official Vector PDF attached & downloaded.*`;
-  } else if (type === 'vehicle') {
-    const v = activePayload;
-    const regNo = v.registration_number || v.vehicle_no || 'TRUCK-01';
-    title = `Send Vehicle Pass to WhatsApp (${regNo})`;
-    subtitle = 'Dispatches official Transport Gate Pass PDF directly to WhatsApp';
-    fileName = `Vehicle_Pass_${regNo}.pdf`;
-    initialPhone = (v.driver_phone || '').replace(/[^\d+]/g, '');
-    generateBlobFn = () => clientMicroPdf.generateVehiclePassPdfBlob({ vehicle: v, firm });
-    downloadFn = () => clientMicroPdf.downloadVehiclePassPdf({ vehicle: v, firm });
-
-    whatsappMessage = `🚛 *VEHICLE DISPATCH GATE PASS*\n🏢 *${companyName}*\n━━━━━━━━━━━━━━━━━━━━\n🚚 *Vehicle No:* ${regNo}\n👤 *Driver:* ${v.driver_name || 'Designated Driver'} (${v.driver_phone || 'N/A'})\n📍 *Destination:* ${v.current_destination || 'Central Warehouse Base'}\n📋 *Status:* ${(v.status || 'AVAILABLE').toUpperCase()}\n📅 *Date:* ${today}\n\n📎 *Official Vector Gate Pass PDF attached & downloaded.*`;
-  } else if (type === 'product') {
-    const p = activePayload;
-    title = `Send Product Spec to WhatsApp (${p.sku})`;
-    subtitle = 'Dispatches Product Spec Sheet PDF directly to WhatsApp';
-    fileName = `Product_Spec_${p.sku}.pdf`;
-    generateBlobFn = () => clientMicroPdf.generateProductPdfBlob({ product: p, firm });
-    downloadFn = () => clientMicroPdf.downloadProductPdf({ product: p, firm });
-
-    whatsappMessage = `🌲 *PRODUCT SPECIFICATION SHEET*\n🏢 *${companyName}*\n━━━━━━━━━━━━━━━━━━━━\n📦 *Product:* ${p.name}\n🔖 *SKU Code:* ${p.sku}\n📂 *Category:* ${p.category || 'Timber'}\n💵 *Price:* ₹${Number(p.selling_price || 0).toFixed(2)}\n⚖️ *Available:* ${p.current_stock || 0} ${p.unit || 'pcs'}\n📅 *Date:* ${today}\n\n📎 *Official Vector PDF attached & downloaded.*`;
-  } else if (type === 'dashboard') {
-    const { invoices = [], inventory = [], vehicles = [] } = activePayload;
-    title = 'Send Daily Operations Report to WhatsApp';
-    subtitle = 'Dispatches Executive KPI Summary PDF directly to WhatsApp';
-    fileName = `Executive_Report_${today}.pdf`;
-    generateBlobFn = () => clientMicroPdf.generateDashboardPdfBlob({ firm, invoices, inventory, vehicles });
-    downloadFn = () => clientMicroPdf.downloadDashboardPdf({ firm, invoices, inventory, vehicles });
-
-    const totalBilled = invoices.reduce((acc, i) => acc + (Number(i.total_amount) || 0), 0);
-    const totalPending = invoices.reduce((acc, i) => acc + (Number(i.balance_due) || 0), 0);
-    whatsappMessage = `📊 *EXECUTIVE DAILY OPERATIONS REPORT*\n🏢 *${companyName}*\n━━━━━━━━━━━━━━━━━━━━\n📅 *Date:* ${today}\n💰 *Total Billed:* ₹${totalBilled.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n⏳ *Outstanding Balance:* ₹${totalPending.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n📦 *Catalog Items:* ${inventory.length}\n🚛 *Fleet Active:* ${vehicles.filter(v => v.status === 'on_delivery').length}\n\n📎 *Official Vector PDF attached & downloaded.*`;
-  } else if (type === 'transaction') {
-    const t = activePayload;
-    const ref = t.reference_number || 'VOUCHER';
-    title = `Send Movement Voucher to WhatsApp (${ref})`;
-    subtitle = 'Dispatches Material Movement Voucher PDF directly to WhatsApp';
-    fileName = `Stock_Voucher_${ref}.pdf`;
-    generateBlobFn = () => clientMicroPdf.generateTransactionPdfBlob({ transaction: t, firm });
-    downloadFn = () => clientMicroPdf.downloadTransactionPdf({ transaction: t, firm });
-
-    const isIn = t.transaction_type === 'STOCK_IN';
-    whatsappMessage = `🧾 *STOCK MOVEMENT VOUCHER: ${ref}*\n🏢 *${companyName}*\n━━━━━━━━━━━━━━━━━━━━\n🔄 *Movement:* ${isIn ? 'STOCK INWARD (RECEIPT)' : 'STOCK OUTWARD (DISPATCH)'}\n📦 *Material:* ${t.item_name || 'Timber'}\n📊 *Quantity:* ${t.quantity || 0} units\n🏢 *Party:* ${t.party_name || 'Warehouse Operations'}\n📅 *Date:* ${today}\n\n📎 *Official Vector PDF attached & downloaded.*`;
-  } else if (type === 'drive') {
-    const f = activePayload;
-    title = 'Send Document Archive Slip to WhatsApp';
-    subtitle = 'Dispatches Cloud Document Archive Slip directly to WhatsApp';
-    fileName = `Document_${f.name || 'Archive'}.pdf`;
-    whatsappMessage = `📁 *OFFICIAL DOCUMENT ARCHIVE NOTICE*\n🏢 *${companyName}*\n━━━━━━━━━━━━━━━━━━━━\n📄 *Document:* ${f.name}\n📂 *Folder:* ${f.category || 'General'}\n📅 *Archived Date:* ${f.upload_date || today}\n\n📎 *Official Document Record - ${companyName}.*`;
-  }
-
-  const [phone, setPhone] = useState(initialPhone);
+  // --------------------------------------------------------------------------
+  // HOOKS MUST ALWAYS BE UNCONDITIONAL AT THE VERY TOP (REACT RULE OF HOOKS)
+  // --------------------------------------------------------------------------
+  const [phone, setPhone] = useState('');
   const [copied, setCopied] = useState(false);
   const [shareStatus, setShareStatus] = useState('');
 
@@ -145,6 +40,119 @@ export default function WhatsAppModal({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
+
+  // Determine active document payload
+  const activePayload = invoice || data;
+
+  // Sync phone when modal opens
+  useEffect(() => {
+    if (isOpen && activePayload) {
+      const p = (activePayload.customer_phone || activePayload.customerPhone || activePayload.whatsapp_no || activePayload.whatsappNo || activePayload.driver_phone || activePayload.phone || '').replace(/[^\d+]/g, '');
+      setPhone(p);
+      setShareStatus('');
+      setCopied(false);
+    }
+  }, [isOpen, invoice, data]);
+
+  const isAshapura = firm?.id === 'shashwat_ashapura_woods' || 
+    (invoice && (invoice.firm_id === 'ashapura' || invoice.firm_name?.includes('ASHAPURA') || invoice.company_name?.includes('ASHAPURA')));
+  const companyName = firm?.name || (isAshapura ? 'SHASHWAT ASHAPURA WOODS' : 'SHASHWAT WOODS');
+  const today = new Date().toISOString().split('T')[0];
+
+  // Configure metadata based on modal type
+  let title = 'Send Invoice Bill to WhatsApp';
+  let subtitle = 'Dispatches vector PDF bill (under 8 KB) directly to WhatsApp';
+  let fileName = 'Document.pdf';
+  let whatsappMessage = '';
+  let generateBlobFn = () => activePayload ? clientMicroPdf.generateInvoicePdfBlob(activePayload) : { blob: new Blob(), sizeKB: 0 };
+  let downloadFn = () => activePayload ? clientMicroPdf.downloadInvoicePdf(activePayload) : null;
+
+  if (activePayload) {
+    if (type === 'invoice' || invoice) {
+      const inv = invoice || activePayload;
+      const invNo = inv.invoice_number || inv.invoiceNumber || 'INV-2026';
+      title = 'Send Invoice Bill to WhatsApp';
+      subtitle = 'Dispatches vector PDF bill (under 8 KB) directly to WhatsApp';
+      fileName = `Invoice_${invNo}.pdf`;
+      whatsappMessage = formatWhatsAppMessage(inv, companyName);
+      generateBlobFn = () => clientMicroPdf.generateInvoicePdfBlob(inv);
+      downloadFn = () => clientMicroPdf.downloadInvoicePdf(inv);
+    } else if (type === 'inventory') {
+      const { item, transactions = [] } = activePayload;
+      const sku = item?.sku || 'SKU';
+      title = `Send Stock Ledger to WhatsApp (${sku})`;
+      subtitle = 'Dispatches vector Stock Movement Ledger PDF directly to WhatsApp';
+      fileName = `Stock_Ledger_${sku}.pdf`;
+      generateBlobFn = () => clientMicroPdf.generateStockPdfBlob({ item, transactions, firm });
+      downloadFn = () => clientMicroPdf.downloadStockPdf({ item, transactions, firm });
+      
+      const itemTrans = (transactions || []).filter(t => 
+        (t.item_id && t.item_id === item?.id) || 
+        (t.item_name && t.item_name.toLowerCase() === (item?.name || '').toLowerCase()) ||
+        (t.sku && t.sku === item?.sku)
+      );
+      const totalIn = itemTrans.filter(t => t.transaction_type === 'STOCK_IN').reduce((sum, t) => sum + Number(t.quantity || 0), 0);
+      const totalOut = itemTrans.filter(t => t.transaction_type === 'STOCK_OUT').reduce((sum, t) => sum + Number(t.quantity || 0), 0);
+
+      whatsappMessage = `📊 *STOCK MOVEMENT LEDGER REPORT*\n🏢 *${companyName}*\n━━━━━━━━━━━━━━━━━━━━\n📦 *Item:* ${item?.name} (${sku})\n📂 *Category:* ${item?.category || 'General Timber'}\n📅 *Date:* ${today}\n\n📥 *Total Stock In:* +${totalIn} ${item?.unit || 'pcs'}\n📤 *Total Stock Out:* -${totalOut} ${item?.unit || 'pcs'}\n⚖️ *Available Balance:* ${item?.current_stock} ${item?.unit || 'pcs'}\n💰 *Selling Rate:* ₹${Number(item?.selling_price || 0).toFixed(2)}\n\n📎 *Official Vector PDF attached & downloaded.*`;
+    } else if (type === 'inventory_master') {
+      const { inventory = [], transactions = [] } = activePayload;
+      title = 'Send Warehouse Master Stock Sheet to WhatsApp';
+      subtitle = 'Dispatches Warehouse Inventory Master PDF directly to WhatsApp';
+      fileName = 'Warehouse_Master_Stock_Sheet.pdf';
+      generateBlobFn = () => clientMicroPdf.generateStockPdfBlob({ item: null, transactions, inventory, firm });
+      downloadFn = () => clientMicroPdf.downloadStockPdf({ item: null, transactions, inventory, firm });
+      
+      whatsappMessage = `📊 *WAREHOUSE MASTER INVENTORY REGISTER*\n🏢 *${companyName}*\n━━━━━━━━━━━━━━━━━━━━\n📅 *Date:* ${today}\n📦 *Total Listed Materials:* ${inventory.length}\n⚖️ *Net In-Stock Balance:* ${inventory.reduce((sum, it) => sum + Number(it.current_stock || 0), 0)} items\n\n📎 *Official Vector PDF attached & downloaded.*`;
+    } else if (type === 'vehicle') {
+      const v = activePayload;
+      const regNo = v.registration_number || v.vehicle_no || 'TRUCK-01';
+      title = `Send Vehicle Pass to WhatsApp (${regNo})`;
+      subtitle = 'Dispatches official Transport Gate Pass PDF directly to WhatsApp';
+      fileName = `Vehicle_Pass_${regNo}.pdf`;
+      generateBlobFn = () => clientMicroPdf.generateVehiclePassPdfBlob({ vehicle: v, firm });
+      downloadFn = () => clientMicroPdf.downloadVehiclePassPdf({ vehicle: v, firm });
+
+      whatsappMessage = `🚛 *VEHICLE DISPATCH GATE PASS*\n🏢 *${companyName}*\n━━━━━━━━━━━━━━━━━━━━\n🚚 *Vehicle No:* ${regNo}\n👤 *Driver:* ${v.driver_name || 'Designated Driver'} (${v.driver_phone || 'N/A'})\n📍 *Destination:* ${v.current_destination || 'Central Warehouse Base'}\n📋 *Status:* ${(v.status || 'AVAILABLE').toUpperCase()}\n📅 *Date:* ${today}\n\n📎 *Official Vector Gate Pass PDF attached & downloaded.*`;
+    } else if (type === 'product') {
+      const p = activePayload;
+      title = `Send Product Spec to WhatsApp (${p.sku})`;
+      subtitle = 'Dispatches Product Spec Sheet PDF directly to WhatsApp';
+      fileName = `Product_Spec_${p.sku}.pdf`;
+      generateBlobFn = () => clientMicroPdf.generateProductPdfBlob({ product: p, firm });
+      downloadFn = () => clientMicroPdf.downloadProductPdf({ product: p, firm });
+
+      whatsappMessage = `🌲 *PRODUCT SPECIFICATION SHEET*\n🏢 *${companyName}*\n━━━━━━━━━━━━━━━━━━━━\n📦 *Product:* ${p.name}\n🔖 *SKU Code:* ${p.sku}\n📂 *Category:* ${p.category || 'Timber'}\n💵 *Price:* ₹${Number(p.selling_price || 0).toFixed(2)}\n⚖️ *Available:* ${p.current_stock || 0} ${p.unit || 'pcs'}\n📅 *Date:* ${today}\n\n📎 *Official Vector PDF attached & downloaded.*`;
+    } else if (type === 'dashboard') {
+      const { invoices = [], inventory = [], vehicles = [] } = activePayload;
+      title = 'Send Daily Operations Report to WhatsApp';
+      subtitle = 'Dispatches Executive KPI Summary PDF directly to WhatsApp';
+      fileName = `Executive_Report_${today}.pdf`;
+      generateBlobFn = () => clientMicroPdf.generateDashboardPdfBlob({ firm, invoices, inventory, vehicles });
+      downloadFn = () => clientMicroPdf.downloadDashboardPdf({ firm, invoices, inventory, vehicles });
+
+      const totalBilled = invoices.reduce((acc, i) => acc + (Number(i.total_amount) || 0), 0);
+      const totalPending = invoices.reduce((acc, i) => acc + (Number(i.balance_due) || 0), 0);
+      whatsappMessage = `📊 *EXECUTIVE DAILY OPERATIONS REPORT*\n🏢 *${companyName}*\n━━━━━━━━━━━━━━━━━━━━\n📅 *Date:* ${today}\n💰 *Total Billed:* ₹${totalBilled.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n⏳ *Outstanding Balance:* ₹${totalPending.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n📦 *Catalog Items:* ${inventory.length}\n🚛 *Fleet Active:* ${vehicles.filter(v => v.status === 'on_delivery').length}\n\n📎 *Official Vector PDF attached & downloaded.*`;
+    } else if (type === 'transaction') {
+      const t = activePayload;
+      const ref = t.reference_number || 'VOUCHER';
+      title = `Send Movement Voucher to WhatsApp (${ref})`;
+      subtitle = 'Dispatches Material Movement Voucher PDF directly to WhatsApp';
+      fileName = `Stock_Voucher_${ref}.pdf`;
+      generateBlobFn = () => clientMicroPdf.generateTransactionPdfBlob({ transaction: t, firm });
+      downloadFn = () => clientMicroPdf.downloadTransactionPdf({ transaction: t, firm });
+
+      const isIn = t.transaction_type === 'STOCK_IN';
+      whatsappMessage = `🧾 *STOCK MOVEMENT VOUCHER: ${ref}*\n🏢 *${companyName}*\n━━━━━━━━━━━━━━━━━━━━\n🔄 *Movement:* ${isIn ? 'STOCK INWARD (RECEIPT)' : 'STOCK OUTWARD (DISPATCH)'}\n📦 *Material:* ${t.item_name || 'Timber'}\n📊 *Quantity:* ${t.quantity || 0} units\n🏢 *Party:* ${t.party_name || 'Warehouse Operations'}\n📅 *Date:* ${today}\n\n📎 *Official Vector PDF attached & downloaded.*`;
+    } else if (type === 'drive') {
+      const f = activePayload;
+      title = 'Send Document Archive Slip to WhatsApp';
+      subtitle = 'Dispatches Cloud Document Archive Slip directly to WhatsApp';
+      fileName = `Document_${f.name || 'Archive'}.pdf`;
+      whatsappMessage = `📁 *OFFICIAL DOCUMENT ARCHIVE NOTICE*\n🏢 *${companyName}*\n━━━━━━━━━━━━━━━━━━━━\n📄 *Document:* ${f.name}\n📂 *Folder:* ${f.category || 'General'}\n📅 *Archived Date:* ${f.upload_date || today}\n\n📎 *Official Document Record - ${companyName}.*`;
+    }
+  }
 
   // Standardize phone for WhatsApp URL (e.g. 9876543210 -> 919876543210)
   const getFormattedPhone = () => {
@@ -210,6 +218,9 @@ export default function WhatsAppModal({
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+
+  // CONDITIONAL RENDER MUST BE AFTER ALL HOOKS
+  if (!isOpen || !activePayload) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">

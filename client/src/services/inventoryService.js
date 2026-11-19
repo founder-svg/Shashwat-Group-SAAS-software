@@ -4,7 +4,7 @@ import { supabase, isConfigured, initialDemoData } from '../config/supabaseClien
 const LOCAL_STORAGE_KEY = 'shashwat_inventory_cache';
 const LOCAL_TRANS_KEY = 'shashwat_transactions_cache';
 
-function getCachedItems() {
+export function getCachedItems() {
   const cached = localStorage.getItem(LOCAL_STORAGE_KEY);
   if (cached) {
     try { 
@@ -16,11 +16,11 @@ function getCachedItems() {
   return [];
 }
 
-function saveCachedItems(items) {
+export function saveCachedItems(items) {
   localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(items));
 }
 
-function getCachedTransactions() {
+export function getCachedTransactions() {
   const cached = localStorage.getItem(LOCAL_TRANS_KEY);
   if (cached) {
     try { 
@@ -31,7 +31,7 @@ function getCachedTransactions() {
   return [];
 }
 
-function saveCachedTransactions(list) {
+export function saveCachedTransactions(list) {
   localStorage.setItem(LOCAL_TRANS_KEY, JSON.stringify(list));
 }
 
@@ -192,77 +192,86 @@ export const inventoryService = {
     return { data: { currentStock: newStock, transaction: transData }, error: transErr };
   },
 
-  async stockOut({ itemId, quantity, referenceNumber, partyName, notes }) {
-    const qty = parseFloat(quantity);
+  async stockOut({ itemId, itemName, quantity, pieces, unit, vehicleNo, referenceNumber, partyName, notes, allowNegative = true }) {
+    const qty = parseFloat(quantity) || 1;
 
-    if (!isConfigured) {
-      const items = getCachedItems();
-      const item = items.find(i => i.id === itemId);
-      if (!item) return { error: { message: 'Item not found' } };
+    // 1. ALWAYS UPDATE LOCAL CACHE FIRST
+    const items = getCachedItems();
+    let item = items.find(i => i.id === itemId);
+    if (!item && itemName) {
+      item = items.find(i => 
+        (i.name && i.name.toLowerCase() === itemName.toLowerCase()) || 
+        (i.sku && i.sku.toLowerCase() === itemName.toLowerCase())
+      );
+    }
 
-      if (Number(item.current_stock) < qty) {
-        return { error: { message: `Insufficient stock! Available: ${item.current_stock} ${item.unit}` } };
-      }
+    let newStock = 0;
+    let effectiveItemName = itemName || 'Stock Material';
+    let effectiveUnit = unit || 'pcs';
 
-      item.current_stock = Number(item.current_stock) - qty;
+    if (item) {
+      effectiveItemName = item.name;
+      effectiveUnit = item.unit || effectiveUnit;
+      const currentVal = Number(item.current_stock || 0);
+      newStock = allowNegative ? (currentVal - qty) : Math.max(0, currentVal - qty);
+      item.current_stock = newStock;
       saveCachedItems(items);
-
-      const transList = getCachedTransactions();
-      const newTrans = {
-        id: `t-${Date.now()}`,
-        transaction_type: 'STOCK_OUT',
-        item_name: item.name,
-        quantity: qty,
-        unit: item.unit,
-        balance_after: item.current_stock,
-        reference_number: referenceNumber || `OUT-${Date.now().toString().slice(-4)}`,
-        party_name: partyName || 'Customer',
-        notes: notes || '',
-        created_at: new Date().toISOString().replace('T', ' ').slice(0, 16),
-        voucher_size_kb: 4.0
-      };
-      transList.unshift(newTrans);
-      saveCachedTransactions(transList);
-
-      return { data: { item, transaction: newTrans }, error: null };
     }
 
-    const { data: itemData, error: itemErr } = await supabase
-      .from('inventory_items')
-      .select('*')
-      .eq('id', itemId)
-      .single();
+    const transList = getCachedTransactions();
+    const newTrans = {
+      id: `t-out-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      transaction_type: 'STOCK_OUT',
+      item_id: item ? item.id : null,
+      item_name: effectiveItemName,
+      quantity: qty,
+      pieces: pieces !== undefined ? pieces : qty,
+      unit: effectiveUnit,
+      balance_after: newStock,
+      reference_number: referenceNumber || `OUT-${Date.now().toString().slice(-4)}`,
+      party_name: partyName || 'Customer Dispatch',
+      vehicle_no: vehicleNo || '',
+      notes: notes || `Dispatched via ${referenceNumber || 'Bill'} to ${partyName || 'Customer'}${vehicleNo ? ` (Vehicle: ${vehicleNo})` : ''}`,
+      created_at: new Date().toISOString().replace('T', ' ').slice(0, 16),
+      voucher_size_kb: 4.2
+    };
+    transList.unshift(newTrans);
+    saveCachedTransactions(transList);
 
-    if (itemErr) return { error: itemErr };
+    // 2. SYNC TO SUPABASE IF CONFIGURED
+    if (isConfigured && supabase && item && item.id && !item.id.startsWith('local-')) {
+      try {
+        await supabase
+          .from('inventory_items')
+          .update({ current_stock: newStock, updated_at: new Date() })
+          .eq('id', item.id);
 
-    if (Number(itemData.current_stock) < qty) {
-      return { error: { message: `Insufficient stock! Available: ${itemData.current_stock} ${itemData.unit}` } };
+        const { data: transData } = await supabase
+          .from('stock_transactions')
+          .insert([{
+            item_id: item.id,
+            transaction_type: 'STOCK_OUT',
+            quantity: qty,
+            unit_cost: item.selling_price || item.cost_price || 0,
+            total_cost: qty * (item.selling_price || item.cost_price || 0),
+            balance_after: newStock,
+            reference_number: referenceNumber,
+            party_name: partyName,
+            notes: (notes ? `${notes} | ` : '') + (vehicleNo ? `Vehicle: ${vehicleNo}` : '')
+          }])
+          .select()
+          .single();
+
+        if (transData) {
+          newTrans.id = transData.id;
+          saveCachedTransactions(transList);
+        }
+      } catch (sbErr) {
+        console.warn('Supabase stockOut sync notice (saved locally):', sbErr);
+      }
     }
 
-    const newStock = Number(itemData.current_stock) - qty;
-
-    await supabase
-      .from('inventory_items')
-      .update({ current_stock: newStock, updated_at: new Date() })
-      .eq('id', itemId);
-
-    const { data: transData, error: transErr } = await supabase
-      .from('stock_transactions')
-      .insert([{
-        item_id: itemId,
-        transaction_type: 'STOCK_OUT',
-        quantity: qty,
-        unit_cost: itemData.selling_price,
-        total_cost: qty * itemData.selling_price,
-        balance_after: newStock,
-        reference_number: referenceNumber,
-        party_name: partyName,
-        notes
-      }])
-      .select()
-      .single();
-
-    return { data: { currentStock: newStock, transaction: transData }, error: transErr };
+    return { data: { item, transaction: newTrans }, error: null };
   },
 
   async updateItem(id, updates) {
@@ -378,5 +387,10 @@ export const inventoryService = {
       .select('*, inventory_items(name, sku, unit)')
       .order('transaction_date', { ascending: false });
     return { data, error };
-  }
+  },
+
+  getCachedItems,
+  saveCachedItems,
+  getCachedTransactions,
+  saveCachedTransactions
 };

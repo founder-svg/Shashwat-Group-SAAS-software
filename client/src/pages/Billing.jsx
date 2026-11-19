@@ -24,6 +24,7 @@ export default function Billing({
   invoices = [], 
   firm,
   inventory = [],
+  vehicles = [],
   onOpenCreate, 
   onPrint, 
   onRecordPayment,
@@ -362,6 +363,7 @@ export default function Billing({
           onUpdated={onUpdateInvoice}
           invoiceToEdit={editingInvoiceData}
           inventoryItems={inventory}
+          vehicles={vehicles}
           firm={firm}
         />
       )}

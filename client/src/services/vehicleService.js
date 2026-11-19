@@ -2,7 +2,7 @@ import { supabase, isConfigured } from '../config/supabaseClient';
 
 const LOCAL_VEHICLE_KEY = 'shashwat_vehicles_cache';
 
-function getCachedVehicles() {
+export function getCachedVehicles() {
   const cached = localStorage.getItem(LOCAL_VEHICLE_KEY);
   if (cached) {
     try { 
@@ -13,7 +13,7 @@ function getCachedVehicles() {
   return [];
 }
 
-function saveCachedVehicles(list) {
+export function saveCachedVehicles(list) {
   try {
     localStorage.setItem(LOCAL_VEHICLE_KEY, JSON.stringify(list));
   } catch (e) {}
@@ -130,5 +130,8 @@ export const vehicleService = {
     }
 
     return { data: { success: true }, error: null };
-  }
+  },
+
+  getCachedVehicles,
+  saveCachedVehicles
 };

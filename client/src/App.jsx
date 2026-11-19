@@ -516,6 +516,7 @@ export default function App() {
                   invoices={invoices}
                   firm={selectedFirm}
                   inventory={inventory}
+                  vehicles={vehicles}
                   onOpenCreate={() => {
                     setInvoiceToEdit(null);
                     setIsInvoiceModalOpen(true);
@@ -554,8 +555,13 @@ export default function App() {
               {activeTab === 'history' && (
                 <StockTransactions 
                   firm={selectedFirm}
-                  transactions={transactions} 
+                  transactions={transactions}
+                  invoices={invoices}
+                  vehicles={vehicles}
+                  inventory={inventory}
                   onDeleteTransaction={handleDeleteTransaction}
+                  onPrintInvoice={openPrintModal}
+                  onDeleteInvoice={handleDeleteInvoice}
                 />
               )}
             </>
@@ -574,6 +580,7 @@ export default function App() {
         onUpdated={handleUpdateInvoice}
         invoiceToEdit={invoiceToEdit}
         inventoryItems={inventory}
+        vehicles={vehicles}
         firm={selectedFirm}
       />
 

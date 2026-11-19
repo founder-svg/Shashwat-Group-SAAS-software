@@ -1,5 +1,6 @@
 import { supabase, isConfigured } from '../config/supabaseClient';
 import { inventoryService } from './inventoryService';
+import { vehicleService } from './vehicleService';
 
 const LOCAL_INVOICE_KEY = 'shashwat_invoices_cache';
 
@@ -209,19 +210,65 @@ export const billingService = {
     cachedInvoices.unshift(newInvoice);
     saveCachedInvoices(cachedInvoices);
 
-    // Auto deduct stock in offline mode
+    // Auto deduct stock and register STOCK_OUT for every billed and dispatched material
     if (autoDeductStock) {
       for (const it of computedItems) {
-        if (it.item_id) {
-          inventoryService.stockOut({
-            itemId: it.item_id,
-            quantity: it.quantity,
-            referenceNumber: invoiceNumber,
-            partyName: customerName,
-            notes: `Dispatched against ${invoiceNumber} (${it.pieces} pcs)`
-          }).catch(() => {});
+        const itemPieces = parseFloat(it.pieces) || 1;
+        const itemSqFt = parseFloat(it.sqft || it.total_cft) || 0;
+        
+        // Find if this item matches any inventory item
+        const allCachedItems = inventoryService.getCachedItems ? inventoryService.getCachedItems() : [];
+        const matchedItem = allCachedItems.find(inv => 
+          (it.item_id && inv.id === it.item_id) ||
+          (inv.name && inv.name.toLowerCase() === (it.item_name || '').toLowerCase()) ||
+          (inv.sku && inv.sku.toLowerCase() === (it.item_name || '').toLowerCase())
+        );
+
+        let deductQty = itemPieces;
+        if (matchedItem) {
+          const u = (matchedItem.unit || '').toLowerCase();
+          if (['sqft', 'sq.ft', 'cft'].includes(u) && itemSqFt > 0) {
+            deductQty = itemSqFt;
+          } else {
+            deductQty = itemPieces;
+          }
         }
+
+        inventoryService.stockOut({
+          itemId: matchedItem ? matchedItem.id : it.item_id,
+          itemName: it.item_name,
+          quantity: deductQty,
+          pieces: itemPieces,
+          unit: matchedItem ? matchedItem.unit : 'pcs',
+          vehicleNo: it.vehicle_no || vehicleNo || '',
+          referenceNumber: invoiceNumber,
+          partyName: customerName,
+          notes: `Billed & Dispatched via Invoice #${invoiceNumber} to ${customerName} (Vehicle: ${it.vehicle_no || vehicleNo || 'N/A'}, Peace: ${itemPieces}${itemSqFt > 0 ? `, ${itemSqFt} sq.ft` : ''})`
+        }).catch(() => {});
       }
+    }
+
+    // Connect & Update Vehicle Dispatch Status
+    if (vehicleNo && vehicleNo.trim()) {
+      const vClean = vehicleNo.trim().toUpperCase();
+      try {
+        const vCached = vehicleService.getCachedVehicles ? vehicleService.getCachedVehicles() : [];
+        const vMatch = vCached.find(v => v.vehicle_number?.toUpperCase() === vClean);
+        if (vMatch) {
+          vMatch.status = 'on_delivery';
+          vMatch.current_destination = `${customerName} (${invoiceNumber})`;
+          if (vehicleService.saveCachedVehicles) {
+            vehicleService.saveCachedVehicles(vCached);
+          }
+          if (isConfigured && supabase && vMatch.id && !String(vMatch.id).startsWith('v-')) {
+            supabase.from('vehicles').update({
+              status: 'on_delivery',
+              current_destination: `${customerName} (${invoiceNumber})`,
+              updated_at: new Date()
+            }).eq('id', vMatch.id).catch(() => {});
+          }
+        }
+      } catch (ve) {}
     }
 
     // 2. SYNC TO SUPABASE IF CONFIGURED (With resilient fallback)

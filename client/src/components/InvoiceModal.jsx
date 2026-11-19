@@ -1,15 +1,33 @@
-import React, { useState, useEffect } from 'react';
-import { X, Plus, Trash2, Receipt, ShieldCheck, Calculator, Ruler, Layers, Send } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { 
+  X, 
+  Plus, 
+  Trash2, 
+  Receipt, 
+  ShieldCheck, 
+  Calculator, 
+  Ruler, 
+  Layers, 
+  Send,
+  Truck,
+  Boxes,
+  Check,
+  ChevronDown,
+  Package,
+  Search,
+  Sparkles
+} from 'lucide-react';
 import { isPlywoodItem } from '../utils/woodCalculator';
 
-export default function InvoiceModal({ 
-  isOpen, 
-  onClose, 
-  onCreated, 
+export default function InvoiceModal({
+  isOpen,
+  onClose,
+  onCreated,
   onUpdated,
   invoiceToEdit = null,
-  inventoryItems = [], 
-  firm 
+  inventoryItems = [],
+  vehicles = [],
+  firm
 }) {
   const isAshapura = firm?.id === 'shashwat_ashapura_woods' || firm?.name?.toLowerCase().includes('ashapura');
   const availableItems = inventoryItems.filter(i => isAshapura || !isPlywoodItem(i));
@@ -24,7 +42,7 @@ export default function InvoiceModal({
   const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
   const [dueDate, setDueDate] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('Bank Transfer');
-  
+
   // Conditional GST: default No GST (0%)
   const [applyGst, setApplyGst] = useState(false);
   const [taxRate, setTaxRate] = useState(18);
@@ -32,19 +50,103 @@ export default function InvoiceModal({
   const [notes, setNotes] = useState('');
   const [autoDeductStock, setAutoDeductStock] = useState(true);
 
+  // Selection Drawers States for Type-Ahead Autocomplete
+  const [activeMaterialDrawerIdx, setActiveMaterialDrawerIdx] = useState(null);
+  const [activeVehicleRowDrawerIdx, setActiveVehicleRowDrawerIdx] = useState(null);
+  const [showVehicleHeaderDrawer, setShowVehicleHeaderDrawer] = useState(false);
+
+  // Close drawers on outside click
+  useEffect(() => {
+    const handleClickAway = (e) => {
+      if (!e.target.closest('.drawer-container')) {
+        setActiveMaterialDrawerIdx(null);
+        setActiveVehicleRowDrawerIdx(null);
+        setShowVehicleHeaderDrawer(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickAway);
+    return () => document.removeEventListener('mousedown', handleClickAway);
+  }, []);
+
+  // Filter matching materials (shows first matches or top saved items)
+  const getMatchingMaterials = (query) => {
+    if (!query || query.trim() === '') {
+      return availableItems.slice(0, 10);
+    }
+    const q = query.toLowerCase().trim();
+    return availableItems.filter(item => 
+      item.name?.toLowerCase().includes(q) ||
+      item.sku?.toLowerCase().includes(q) ||
+      (item.category && item.category.toLowerCase().includes(q))
+    ).slice(0, 12);
+  };
+
+  // Filter matching registered vehicles
+  const getMatchingVehicles = (query) => {
+    if (!query || query.trim() === '') {
+      return (vehicles || []).slice(0, 8);
+    }
+    const q = query.toLowerCase().trim();
+    return (vehicles || []).filter(v => 
+      v.vehicle_number?.toLowerCase().includes(q) ||
+      v.driver_name?.toLowerCase().includes(q) ||
+      v.vehicle_type?.toLowerCase().includes(q)
+    ).slice(0, 10);
+  };
+
+  const handleSelectMaterial = (idx, item) => {
+    const updated = [...items];
+    const row = { ...updated[idx] };
+    row.itemId = item.id;
+    row.itemName = item.name || '';
+    if (!row.itemDescription) {
+      row.itemDescription = item.description || item.category || '';
+    }
+    if (Number(row.unitPrice) <= 0) {
+      row.unitPrice = Number(item.selling_price || item.cost_price || 0);
+    }
+    if (item.length && !row.length) row.length = item.length;
+    if (item.width && !row.width) row.width = item.width;
+    row.sqft = calculateSqFtFormula(row.length, row.width, row.pieces || 1);
+    updated[idx] = row;
+    setItems(updated);
+    setActiveMaterialDrawerIdx(null);
+  };
+
+  const handleSelectHeaderVehicle = (v) => {
+    setVehicleNo(v.vehicle_number);
+    if (v.driver_name) {
+      setTransport(`${v.driver_name} (${v.vehicle_type || 'Truck'})`);
+    }
+    setShowVehicleHeaderDrawer(false);
+    // Propagate to rows that have empty or matching previous vehicleNo
+    const updated = items.map(it => ({
+      ...it,
+      vehicleNo: (!it.vehicleNo || it.vehicleNo === vehicleNo) ? v.vehicle_number : it.vehicleNo
+    }));
+    setItems(updated);
+  };
+
+  const handleSelectRowVehicle = (idx, v) => {
+    const updated = [...items];
+    updated[idx] = { ...updated[idx], vehicleNo: v.vehicle_number };
+    setItems(updated);
+    setActiveVehicleRowDrawerIdx(null);
+  };
+
   // Line items matching client sample table:
   // Sr.no | vechile no | length | width | peace | sq.ft | description | specific | Total
   const [items, setItems] = useState([
-    { 
-      itemId: '', 
+    {
+      itemId: '',
       vehicleNo: '',
-      length: '', 
-      width: '', 
+      length: '',
+      width: '',
       pieces: 1, // peace
       sqft: 0,   // calculated as length * width * peace / 144
-      itemName: '', 
+      itemName: '',
       itemDescription: '', // specific
-      unitPrice: 0 
+      unitPrice: 0
     }
   ]);
 
@@ -62,7 +164,7 @@ export default function InvoiceModal({
       setInvoiceDate(invoiceToEdit.invoice_date || invoiceToEdit.invoiceDate || new Date().toISOString().split('T')[0]);
       setDueDate(invoiceToEdit.due_date || invoiceToEdit.dueDate || '');
       setPaymentMethod(invoiceToEdit.payment_method || invoiceToEdit.paymentMethod || 'Bank Transfer');
-      
+
       const invTaxRate = Number(invoiceToEdit.tax_rate ?? invoiceToEdit.taxRate ?? 0);
       if (invTaxRate > 0) {
         setApplyGst(true);
@@ -105,16 +207,16 @@ export default function InvoiceModal({
       setDiscountAmount(0);
       setNotes('');
       setItems([
-        { 
-          itemId: '', 
+        {
+          itemId: '',
           vehicleNo: '',
-          length: '', 
-          width: '', 
-          pieces: 1, 
-          sqft: 0, 
-          itemName: '', 
-          itemDescription: '', 
-          unitPrice: 0 
+          length: '',
+          width: '',
+          pieces: 1,
+          sqft: 0,
+          itemName: '',
+          itemDescription: '',
+          unitPrice: 0
         }
       ]);
     }
@@ -176,17 +278,17 @@ export default function InvoiceModal({
 
   const addItemRow = () => {
     setItems([
-      ...items, 
-      { 
-        itemId: '', 
+      ...items,
+      {
+        itemId: '',
         vehicleNo: vehicleNo || '',
-        length: '', 
-        width: '', 
-        pieces: 1, 
-        sqft: 0, 
-        itemName: '', 
-        itemDescription: '', 
-        unitPrice: 0 
+        length: '',
+        width: '',
+        pieces: 1,
+        sqft: 0,
+        itemName: '',
+        itemDescription: '',
+        unitPrice: 0
       }
     ]);
   };
@@ -304,7 +406,7 @@ export default function InvoiceModal({
   if (!isOpen) return null;
 
   return (
-    <div 
+    <div
       className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-sm flex justify-center items-start p-2 sm:p-6"
       onClick={(e) => {
         if (e.target === e.currentTarget) {
@@ -328,9 +430,9 @@ export default function InvoiceModal({
               </p>
             </div>
           </div>
-          <button 
+          <button
             type="button"
-            onClick={onClose} 
+            onClick={onClose}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 hover:bg-red-500 active:scale-95 text-white font-bold text-xs rounded-xl shadow-md transition ml-2 cursor-pointer ring-2 ring-red-400/40"
             title="Close (Esc)"
           >
@@ -367,7 +469,7 @@ export default function InvoiceModal({
             <div>
               <label className="block text-xs font-bold text-emerald-800 mb-1 flex items-center gap-1">
                 <svg className="w-3.5 h-3.5 fill-emerald-600 shrink-0" viewBox="0 0 24 24">
-                  <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.275.072.376-.044c.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.043.073.043.419-.101.824z"/>
+                  <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.275.072.376-.044c.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.043.073.043.419-.101.824z" />
                 </svg>
                 <span>WhatsApp No (for PDF)</span>
               </label>
@@ -417,20 +519,95 @@ export default function InvoiceModal({
             </div>
           </div>
 
-          {/* Vehicle and Transport Row */}
+          {/* Vehicle and Transport Row with Type-Ahead Selection Drawer */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
-            <div>
-              <label className="block text-xs font-bold text-slate-800 mb-1">Vehicle No (vechile no)</label>
-              <input
-                type="text"
-                value={vehicleNo}
-                onChange={(e) => setVehicleNo(e.target.value.toUpperCase())}
-                placeholder="e.g. GJ-18-BW-7236"
-                className="w-full text-xs px-3 py-1.5 border border-amber-300 bg-white rounded-lg font-mono font-bold"
-              />
+            <div className="relative drawer-container">
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                  <Truck className="w-3.5 h-3.5 text-amber-600" />
+                  <span>Vehicle No (vechile no)</span>
+                </label>
+                <span className="text-[10px] text-amber-700 font-semibold">
+                  Type letter to search vehicles
+                </span>
+              </div>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={vehicleNo}
+                  onFocus={() => setShowVehicleHeaderDrawer(true)}
+                  onChange={(e) => {
+                    setVehicleNo(e.target.value.toUpperCase());
+                    setShowVehicleHeaderDrawer(true);
+                  }}
+                  placeholder="e.g. Type 'A' or 'G' (GJ-18-BW-7236)..."
+                  className="w-full text-xs px-3 py-1.5 pr-8 border border-amber-300 bg-white rounded-lg font-mono font-bold focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowVehicleHeaderDrawer(!showVehicleHeaderDrawer)}
+                  className="absolute right-2 top-2 text-slate-400 hover:text-slate-600"
+                >
+                  <ChevronDown className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Autocomplete Drawer for Header Vehicle */}
+              {showVehicleHeaderDrawer && (
+                <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-white rounded-xl shadow-2xl border border-slate-300 overflow-hidden max-h-56 overflow-y-auto animate-in fade-in zoom-in-95 duration-100">
+                  <div className="bg-slate-900 text-white px-3 py-1.5 text-[11px] font-bold flex items-center justify-between sticky top-0 z-10">
+                    <span className="flex items-center gap-1.5">
+                      <Truck className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Registered Vehicles ({getMatchingVehicles(vehicleNo).length} found)</span>
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-normal">Click to select</span>
+                  </div>
+                  <div className="divide-y divide-slate-100">
+                    {getMatchingVehicles(vehicleNo).length === 0 ? (
+                      <div className="p-3 text-center text-xs text-slate-400">
+                        No registered vehicle matches "{vehicleNo}". You can type any number manually.
+                      </div>
+                    ) : (
+                      getMatchingVehicles(vehicleNo).map((v) => (
+                        <button
+                          key={v.id || v.vehicle_number}
+                          type="button"
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            handleSelectHeaderVehicle(v);
+                          }}
+                          className="w-full text-left p-2.5 hover:bg-amber-50/80 transition flex items-center justify-between gap-2 group cursor-pointer"
+                        >
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-mono font-bold text-slate-900 group-hover:text-amber-900">
+                                {v.vehicle_number}
+                              </span>
+                              <span className="text-[10px] font-semibold text-slate-500">
+                                {v.vehicle_type || 'Truck'}
+                              </span>
+                            </div>
+                            <p className="text-[10px] text-slate-500 mt-0.5">
+                              Driver: <strong className="text-slate-700">{v.driver_name || 'Unassigned'}</strong>
+                              {v.driver_phone ? ` • ${v.driver_phone}` : ''}
+                            </p>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold ${
+                              v.status === 'available' ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-800'
+                            }`}>
+                              {v.status === 'available' ? '● Available' : '● On Route'}
+                            </span>
+                          </div>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Transport</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Transport Details / Driver</label>
               <input
                 type="text"
                 value={transport}
@@ -482,56 +659,211 @@ export default function InvoiceModal({
                     )}
                   </div>
 
-                  {/* Description & Specific */}
-                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
-                    <div>
-                      <select
-                        value={row.itemId}
-                        onChange={(e) => handleItemChange(idx, 'itemId', e.target.value)}
-                        className="w-full text-xs px-2.5 py-1.5 border border-slate-300 rounded-lg bg-slate-50"
-                      >
-                        <option value="">-- Catalog (Optional) --</option>
-                        {availableItems.map(inv => (
-                          <option key={inv.id} value={inv.id}>
-                            {inv.name}
-                          </option>
-                        ))}
-                      </select>
+                  {/* Material (Type-Ahead Selection Drawer), Description & Specific */}
+                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
+                    {/* Field 1: Material (Saved Stock Autocomplete Drawer) */}
+                    <div className="sm:col-span-5 relative drawer-container">
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-[10px] font-bold text-slate-800 flex items-center gap-1">
+                          <Boxes className="w-3 h-3 text-amber-600" />
+                          <span>Material (Saved Stock Selection)</span>
+                        </label>
+                        {row.itemId && (
+                          <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
+                            ✓ In Stock
+                          </span>
+                        )}
+                      </div>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          required
+                          value={row.itemName}
+                          onFocus={() => setActiveMaterialDrawerIdx(idx)}
+                          onChange={(e) => {
+                            handleItemChange(idx, 'itemName', e.target.value);
+                            setActiveMaterialDrawerIdx(idx);
+                          }}
+                          placeholder="Type 1st letter (e.g. T for Teak, P for Pine...)"
+                          className="w-full text-xs px-2.5 py-1.5 pr-7 border-2 border-amber-300 rounded-lg font-bold text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setActiveMaterialDrawerIdx(activeMaterialDrawerIdx === idx ? null : idx)}
+                          className="absolute right-2 top-2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                        >
+                          <ChevronDown className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+
+                      {/* Autocomplete Drawer for Material */}
+                      {activeMaterialDrawerIdx === idx && (
+                        <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-white rounded-xl shadow-2xl border border-slate-300 overflow-hidden max-h-64 overflow-y-auto animate-in fade-in zoom-in-95 duration-100">
+                          <div className="bg-slate-900 text-white px-3 py-1.5 text-[11px] font-bold flex items-center justify-between sticky top-0 z-10">
+                            <span className="flex items-center gap-1.5">
+                              <Boxes className="w-3.5 h-3.5 text-amber-400" />
+                              <span>Warehouse Stock ({getMatchingMaterials(row.itemName).length} found)</span>
+                            </span>
+                            <span className="text-[10px] text-slate-400 font-normal">Click to link &amp; auto-fill</span>
+                          </div>
+                          <div className="divide-y divide-slate-100">
+                            {getMatchingMaterials(row.itemName).length === 0 ? (
+                              <div className="p-3 text-center text-xs text-slate-500">
+                                No saved material matches "{row.itemName}". You can type custom material name freely.
+                              </div>
+                            ) : (
+                              getMatchingMaterials(row.itemName).map((inv) => {
+                                const isHealthy = Number(inv.current_stock || 0) > 0;
+                                return (
+                                  <button
+                                    key={inv.id}
+                                    type="button"
+                                    onMouseDown={(e) => {
+                                      e.preventDefault();
+                                      handleSelectMaterial(idx, inv);
+                                    }}
+                                    className="w-full text-left p-2.5 hover:bg-amber-50/80 transition flex items-center justify-between gap-2 group cursor-pointer"
+                                  >
+                                    <div className="min-w-0 flex-1">
+                                      <div className="flex items-center gap-1.5 flex-wrap">
+                                        <span className="text-xs font-bold text-slate-900 group-hover:text-amber-900 truncate">
+                                          {inv.name}
+                                        </span>
+                                        {inv.sku && (
+                                          <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 border border-slate-200">
+                                            {inv.sku}
+                                          </span>
+                                        )}
+                                        {inv.category && (
+                                          <span className="text-[9px] px-1.5 py-0.2 rounded bg-slate-100 text-slate-500">
+                                            {inv.category}
+                                          </span>
+                                        )}
+                                      </div>
+                                      {inv.description && (
+                                        <p className="text-[10px] text-slate-500 truncate mt-0.5">
+                                          {inv.description}
+                                        </p>
+                                      )}
+                                    </div>
+                                    <div className="text-right shrink-0">
+                                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                        isHealthy ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-rose-100 text-rose-800 border border-rose-300'
+                                      }`}>
+                                        {isHealthy ? `Stock: ${inv.current_stock} ${inv.unit || 'pcs'}` : '0 In Stock'}
+                                      </span>
+                                      <div className="text-[11px] font-bold text-slate-700 mt-0.5">
+                                        ₹{Number(inv.selling_price || inv.cost_price || 0).toFixed(2)}
+                                      </div>
+                                    </div>
+                                  </button>
+                                );
+                              })
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
 
-                    <div className="sm:col-span-2">
+                    {/* Field 2: Description */}
+                    <div className="sm:col-span-4">
+                      <label className="block text-[10px] font-semibold text-slate-700 mb-1">
+                        description (e.g. Teak Sawn Timber Planks)
+                      </label>
                       <input
                         type="text"
-                        required
-                        placeholder="description (e.g. Teak Sawn Timber Planks)"
-                        value={row.itemName}
-                        onChange={(e) => handleItemChange(idx, 'itemName', e.target.value)}
-                        className="w-full text-xs px-3 py-1.5 border border-slate-300 rounded-lg font-bold text-slate-900"
+                        placeholder="description (e.g. Teak Sawn Planks)"
+                        value={row.itemDescription}
+                        onChange={(e) => handleItemChange(idx, 'itemDescription', e.target.value)}
+                        className="w-full text-xs px-2.5 py-1.5 border border-slate-300 rounded-lg text-slate-800 bg-white"
                       />
                     </div>
 
-                    <div>
+                    {/* Field 3: Specific */}
+                    <div className="sm:col-span-3">
+                      <label className="block text-[10px] font-semibold text-slate-700 mb-1">
+                        specific (e.g. Grade A)
+                      </label>
                       <input
                         type="text"
                         placeholder="specific (e.g. Grade A)"
-                        value={row.itemDescription}
-                        onChange={(e) => handleItemChange(idx, 'itemDescription', e.target.value)}
-                        className="w-full text-xs px-3 py-1.5 border border-slate-200 rounded-lg text-slate-600 bg-slate-50/50"
+                        value={row.specific || ''}
+                        onChange={(e) => handleItemChange(idx, 'specific', e.target.value)}
+                        className="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded-lg text-slate-600 bg-slate-50/50"
                       />
                     </div>
                   </div>
 
                   {/* Calculations Grid: vechile no | length | width | peace | sq.ft | Rate | Total */}
                   <div className="grid grid-cols-2 sm:grid-cols-7 gap-2 items-center bg-amber-50/50 p-2.5 rounded-lg border border-amber-200/60">
-                    <div>
+                    <div className="relative drawer-container">
                       <label className="block text-[10px] font-semibold text-slate-700">vechile no</label>
-                      <input
-                        type="text"
-                        placeholder={vehicleNo || 'Vehicle'}
-                        value={row.vehicleNo}
-                        onChange={(e) => handleItemChange(idx, 'vehicleNo', e.target.value.toUpperCase())}
-                        className="w-full text-xs px-2 py-1 bg-white border border-slate-300 rounded font-mono text-center"
-                      />
+                      <div className="relative">
+                        <input
+                          type="text"
+                          placeholder={vehicleNo || 'Vehicle'}
+                          value={row.vehicleNo}
+                          onFocus={() => setActiveVehicleRowDrawerIdx(idx)}
+                          onChange={(e) => {
+                            handleItemChange(idx, 'vehicleNo', e.target.value.toUpperCase());
+                            setActiveVehicleRowDrawerIdx(idx);
+                          }}
+                          className="w-full text-xs px-2 py-1 pr-4 bg-white border border-slate-300 rounded font-mono text-center font-bold"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setActiveVehicleRowDrawerIdx(activeVehicleRowDrawerIdx === idx ? null : idx)}
+                          className="absolute right-1 top-1.5 text-slate-400 hover:text-slate-600"
+                        >
+                          <ChevronDown className="w-3 h-3" />
+                        </button>
+                      </div>
+
+                      {/* Autocomplete Drawer for Row Vehicle */}
+                      {activeVehicleRowDrawerIdx === idx && (
+                        <div className="absolute left-0 sm:left-auto right-0 top-full mt-1 z-50 w-72 bg-white rounded-xl shadow-2xl border border-slate-300 overflow-hidden max-h-56 overflow-y-auto animate-in fade-in zoom-in-95 duration-100 text-left">
+                          <div className="bg-slate-900 text-white px-2.5 py-1 text-[10px] font-bold flex items-center justify-between sticky top-0 z-10">
+                            <span className="flex items-center gap-1">
+                              <Truck className="w-3 h-3 text-amber-400" />
+                              <span>Select Dispatch Vehicle</span>
+                            </span>
+                            <span className="text-[9px] text-slate-400">Click to choose</span>
+                          </div>
+                          <div className="divide-y divide-slate-100">
+                            {getMatchingVehicles(row.vehicleNo).length === 0 ? (
+                              <div className="p-2 text-center text-xs text-slate-400">
+                                No registered vehicles match. Type manually.
+                              </div>
+                            ) : (
+                              getMatchingVehicles(row.vehicleNo).map((v) => (
+                                <button
+                                  key={v.id || v.vehicle_number}
+                                  type="button"
+                                  onMouseDown={(e) => {
+                                    e.preventDefault();
+                                    handleSelectRowVehicle(idx, v);
+                                  }}
+                                  className="w-full text-left p-2 hover:bg-amber-50 transition flex items-center justify-between cursor-pointer"
+                                >
+                                  <div>
+                                    <span className="text-xs font-mono font-bold text-slate-900">
+                                      {v.vehicle_number}
+                                    </span>
+                                    <p className="text-[10px] text-slate-500 truncate">
+                                      {v.driver_name || 'Driver'} • {v.vehicle_type || 'Truck'}
+                                    </p>
+                                  </div>
+                                  <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded-full ${
+                                    v.status === 'available' ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-800'
+                                  }`}>
+                                    {v.status || 'available'}
+                                  </span>
+                                </button>
+                              ))
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     <div>
@@ -598,6 +930,31 @@ export default function InvoiceModal({
                       </div>
                     </div>
                   </div>
+
+                  {/* Connected Stock Info Banner */}
+                  {(() => {
+                    const linkedItem = availableItems.find(i => 
+                      (row.itemId && i.id === row.itemId) || 
+                      (row.itemName && i.name?.toLowerCase() === row.itemName.toLowerCase())
+                    );
+                    if (linkedItem) {
+                      return (
+                        <div className="flex items-center justify-between bg-emerald-50/90 border border-emerald-200/90 px-3 py-1.5 rounded-lg text-[10px] text-emerald-950">
+                          <div className="flex items-center gap-1.5">
+                            <Package className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                            <span>Connected Warehouse Stock: <strong>{linkedItem.name}</strong> ({linkedItem.sku || 'SKU'})</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span>Available: <strong className="text-emerald-800">{linkedItem.current_stock} {linkedItem.unit || 'pcs'}</strong></span>
+                            <span className="text-[9px] bg-emerald-200/70 text-emerald-900 px-2 py-0.5 rounded font-bold">
+                              Will deduct {row.pieces || 1} peace from Stock In &amp; log in Stock Out
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
                 </div>
               ))}
             </div>
@@ -738,7 +1095,7 @@ export default function InvoiceModal({
                 title="Save bill, download vector PDF, and immediately redirect to WhatsApp"
               >
                 <svg className="w-4 h-4 fill-white" viewBox="0 0 24 24">
-                  <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.275.072.376-.044c.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.043.073.043.419-.101.824z"/>
+                  <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.275.072.376-.044c.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.043.073.043.419-.101.824z" />
                 </svg>
                 <span>Issue &amp; Send to WhatsApp (PDF)</span>
               </button>

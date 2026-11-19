@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { clientMicroPdf } from '../utils/microPdfGenerator';
 import WhatsAppModal from '../components/WhatsAppModal';
+import GlassFolder from '../components/ui/glass-folder-cards';
 
 export default function StockTransactions({ 
   firm, 
@@ -35,6 +36,7 @@ export default function StockTransactions({
   onPrintInvoice, 
   onDeleteInvoice 
 }) {
+  const [viewMode, setViewMode] = useState('table'); // 'table' | 'folders'
   const [activeTab, setActiveTab] = useState('ALL'); // 'ALL' | 'BILLS' | 'STOCK_IN' | 'STOCK_OUT' | 'VEHICLES'
   const [searchTerm, setSearchTerm] = useState('');
   const [dateFilter, setDateFilter] = useState('ALL'); // 'ALL' | 'TODAY' | 'WEEK' | 'MONTH'
@@ -205,14 +207,46 @@ export default function StockTransactions({
           </div>
         </div>
 
-        <button
-          onClick={() => window.print()}
-          type="button"
-          className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 font-bold text-xs rounded-xl shadow-xs transition no-print self-start sm:self-auto cursor-pointer"
-        >
-          <Printer className="w-4 h-4 text-amber-600" />
-          <span>Print Audit Sheet</span>
-        </button>
+        <div className="flex items-center gap-2 self-start sm:self-auto no-print flex-wrap">
+          <div className="bg-slate-200/80 p-1 rounded-xl flex items-center border border-slate-300 shadow-2xs">
+            <button
+              type="button"
+              onClick={() => setViewMode('table')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                viewMode === 'table'
+                  ? 'bg-white text-slate-900 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5 text-amber-600" />
+              <span>Table Audit View</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('folders')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                viewMode === 'folders'
+                  ? 'bg-slate-900 text-amber-400 shadow-md font-black ring-1 ring-amber-400/30'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Boxes className="w-3.5 h-3.5 text-amber-400" />
+              <span>3D Glass Folders Vault</span>
+              <span className="text-[9px] bg-amber-400/20 text-amber-500 px-1.5 py-0.2 rounded font-mono font-bold">
+                Animated
+              </span>
+            </button>
+          </div>
+
+          <button
+            onClick={() => window.print()}
+            type="button"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 font-bold text-xs rounded-xl shadow-xs transition cursor-pointer"
+          >
+            <Printer className="w-4 h-4 text-amber-600" />
+            <span>Print Sheet</span>
+          </button>
+        </div>
       </div>
 
       {/* KPI Stats Overview Cards */}
@@ -392,9 +426,191 @@ export default function StockTransactions({
       </div>
 
       {/* ===================================================================== */}
-      {/* TAB 1: ALL ACTIVITIES UNIFIED TIMELINE */}
+      {/* 3D GLASS FOLDER CARDS VAULT (ANIMATED CRM THEME) */}
       {/* ===================================================================== */}
-      {activeTab === 'ALL' && (
+      {viewMode === 'folders' && (
+        <div className="relative rounded-3xl bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 border border-slate-800 p-6 sm:p-10 overflow-hidden shadow-2xl">
+          {/* Subtle desk dot grid background */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 text-amber-400 opacity-[0.07]"
+            style={{
+              backgroundImage: "radial-gradient(currentColor 1.2px, transparent 1.5px)",
+              backgroundSize: "24px 24px",
+            }}
+          />
+
+          {/* Header banner */}
+          <div className="relative text-center max-w-2xl mx-auto mb-10">
+            <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-[11px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30 uppercase tracking-widest mb-2.5 shadow-inner">
+              <Boxes className="w-3.5 h-3.5" />
+              <span>Interactive Document &amp; Voucher Vault</span>
+            </span>
+            <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+              3D Frosted Glass File Archives
+            </h2>
+            <p className="text-xs text-slate-400 mt-1">
+              Move cursor to tilt light &amp; 3D perspective · Hover folder to lean glass · Click to fan &amp; inspect sheets
+            </p>
+          </div>
+
+          {/* 4 Interactive Glass Folders in Responsive Grid */}
+          <div className="relative grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-x-8 gap-y-12 items-end justify-items-center py-4">
+            
+            {/* Folder 1: Customer Invoices (Amber Wood theme) */}
+            <GlassFolder
+              label="Billed Invoices"
+              meta={`${filteredInvoices.length} Bills Archived`}
+              tone="light"
+              art="amberWood"
+              seed={108}
+              appearDelay={0}
+              action="more"
+              files={
+                filteredInvoices.length > 0
+                  ? filteredInvoices.slice(0, 5).map(inv => ({
+                      name: inv.invoice_number,
+                      meta: `₹${Number(inv.total_amount).toFixed(2)} · ${inv.customer_name}`,
+                      raw: inv
+                    }))
+                  : [
+                      { name: "No Invoices Yet", meta: "Create in Billing" }
+                    ]
+              }
+              onFileSelect={(file) => {
+                if (file.raw && onPrintInvoice) {
+                  onPrintInvoice(file.raw);
+                }
+              }}
+              menu={[
+                { 
+                  label: "Preview Latest Bill", 
+                  onSelect: () => filteredInvoices[0] && onPrintInvoice && onPrintInvoice(filteredInvoices[0]) 
+                },
+                {
+                  label: "Switch to Table View",
+                  onSelect: () => setViewMode('table')
+                }
+              ]}
+            />
+
+            {/* Folder 2: Stock Inward Receipts (Forest Teak theme) */}
+            <GlassFolder
+              label="Stock In (Input)"
+              meta={`${stockInList.length} Receipts`}
+              tone="light"
+              art="forestTeak"
+              seed={42}
+              appearDelay={140}
+              action="add"
+              files={
+                stockInList.length > 0
+                  ? stockInList.slice(0, 5).map(t => ({
+                      name: t.item_name,
+                      meta: `+${t.quantity} ${t.unit || 'pcs'} · ${t.party_name || 'Receipt'}`,
+                      raw: t
+                    }))
+                  : [
+                      { name: "Warehouse Inward", meta: "Raw Logs Receipt" }
+                    ]
+              }
+              onFileSelect={(file) => {
+                if (file.raw) {
+                  setWhatsAppModalData(file.raw);
+                  setWhatsAppModalType('transaction');
+                }
+              }}
+            />
+
+            {/* Folder 3: Stock Dispatches (Warm Mahogany theme) */}
+            <GlassFolder
+              label="Stock Out (Dispatches)"
+              meta={`${stockOutList.length} Dispatches`}
+              tone="dark"
+              art="mahogany"
+              seed={77}
+              appearDelay={280}
+              action="more"
+              files={
+                stockOutList.length > 0
+                  ? stockOutList.slice(0, 5).map(t => ({
+                      name: t.item_name,
+                      meta: `-${t.quantity} ${t.unit || 'pcs'} · ${t.vehicle_no || t.party_name || 'Out'}`,
+                      raw: t
+                    }))
+                  : [
+                      { name: "Outward Dispatches", meta: "Billed Deliveries" }
+                    ]
+              }
+              onFileSelect={(file) => {
+                if (file.raw) {
+                  setWhatsAppModalData(file.raw);
+                  setWhatsAppModalType('transaction');
+                }
+              }}
+              menu={[
+                {
+                  label: "View All Dispatches in Table",
+                  onSelect: () => {
+                    setViewMode('table');
+                    setActiveTab('STOCK_OUT');
+                  }
+                }
+              ]}
+            />
+
+            {/* Folder 4: Fleet Vehicles & Trips (Slate Navy theme) */}
+            <GlassFolder
+              label="Fleet Vehicles & Trips"
+              meta={`${filteredVehicles.length} Registered`}
+              tone="dark"
+              art="slateNavy"
+              seed={13}
+              appearDelay={420}
+              action="none"
+              files={
+                filteredVehicles.length > 0
+                  ? filteredVehicles.slice(0, 5).map(v => ({
+                      name: v.vehicle_number,
+                      meta: `${v.driver_name || 'Driver'} · ${v.status === 'available' ? 'Available' : 'On Route'}`,
+                      raw: v
+                    }))
+                  : [
+                      { name: "No Vehicles Yet", meta: "Register in Fleet" }
+                    ]
+              }
+              onFileSelect={(file) => {
+                if (file.raw) {
+                  setWhatsAppModalData(file.raw);
+                  setWhatsAppModalType('vehicle');
+                }
+              }}
+            />
+          </div>
+
+          {/* Bottom guidance notes */}
+          <div className="relative mt-8 pt-4 border-t border-slate-800 flex flex-wrap items-center justify-between text-[11px] text-slate-400 gap-3">
+            <span className="font-mono text-amber-400 font-semibold">
+              ✦ Clicking any bill or voucher sheet directly opens its live preview &amp; WhatsApp share.
+            </span>
+            <button
+              type="button"
+              onClick={() => setViewMode('table')}
+              className="text-white hover:text-amber-400 font-bold underline cursor-pointer"
+            >
+              Switch back to Full Table Audit View →
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ===================================================================== */}
+      {/* AUDIT TABLES VIEW */}
+      {/* ===================================================================== */}
+      {viewMode === 'table' && (
+        <>
+          {/* TAB 1: ALL ACTIVITIES UNIFIED TIMELINE */}
+          {activeTab === 'ALL' && (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
           <div className="px-4 py-3 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
             <span className="text-xs font-bold uppercase tracking-wider flex items-center gap-2">
@@ -918,6 +1134,8 @@ export default function StockTransactions({
             </table>
           </div>
         </div>
+      )}
+        </>
       )}
 
       {/* Global WhatsApp Modal for History */}

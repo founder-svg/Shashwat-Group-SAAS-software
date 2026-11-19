@@ -11,6 +11,7 @@ import StockTransactions from './pages/StockTransactions';
 
 import FirmSelectionScreen from './components/FirmSelectionScreen';
 import AuthScreen from './components/AuthScreen';
+import { FIRMS } from './constants/firms';
 
 import InvoiceModal from './components/InvoiceModal';
 import StockMovementModal from './components/StockMovementModal';
@@ -49,6 +50,17 @@ export default function App() {
       return null;
     }
   });
+
+  const [lastFirm, setLastFirm] = useState(() => {
+    try {
+      const stored = localStorage.getItem('shashwat_last_firm') || localStorage.getItem('shashwat_firm');
+      return stored ? JSON.parse(stored) : FIRMS.SHASHWAT_WOODS;
+    } catch (e) {
+      return FIRMS.SHASHWAT_WOODS;
+    }
+  });
+
+  const [authInitialMode, setAuthInitialMode] = useState('login');
 
   const [user, setUser] = useState(() => {
     try {
@@ -134,7 +146,19 @@ export default function App() {
   // Auth Flow Handlers
   const handleSelectFirm = (firm) => {
     setSelectedFirm(firm);
+    setLastFirm(firm);
     localStorage.setItem('shashwat_firm', JSON.stringify(firm));
+    localStorage.setItem('shashwat_last_firm', JSON.stringify(firm));
+  };
+
+  const handleBackToAuth = (mode = 'login') => {
+    setAuthInitialMode(mode);
+    const targetFirm = lastFirm || FIRMS.SHASHWAT_WOODS;
+    setSelectedFirm(targetFirm);
+    if (user) {
+      setUser(null);
+      localStorage.removeItem('shashwat_user');
+    }
   };
 
   const handleLoginSuccess = (authenticatedUser, firm) => {
@@ -394,7 +418,17 @@ export default function App() {
   // LAYER 1: Choose Business Division (Shashwat Woods vs Shashwat Ashapura Woods)
   // --------------------------------------------------------------------------
   if (!selectedFirm) {
-    return <FirmSelectionScreen onSelectFirm={handleSelectFirm} />;
+    return (
+      <FirmSelectionScreen 
+        user={user}
+        lastFirm={lastFirm}
+        onSelectFirm={handleSelectFirm}
+        onBackToAuth={handleBackToAuth}
+        onBackToDashboard={() => {
+          setSelectedFirm(lastFirm || FIRMS.SHASHWAT_WOODS);
+        }}
+      />
+    );
   }
 
   // --------------------------------------------------------------------------
@@ -404,6 +438,7 @@ export default function App() {
     return (
       <AuthScreen
         firm={selectedFirm}
+        initialMode={authInitialMode}
         onBackToFirms={handleSwitchFirm}
         onLoginSuccess={handleLoginSuccess}
       />

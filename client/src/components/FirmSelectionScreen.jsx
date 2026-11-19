@@ -1,14 +1,73 @@
 import React from 'react';
-import { Building2, ArrowRight, ShieldCheck, Sparkles, ExternalLink } from 'lucide-react';
+import { 
+  Building2, 
+  ArrowRight, 
+  ArrowLeft, 
+  ShieldCheck, 
+  Sparkles, 
+  ExternalLink,
+  KeyRound,
+  UserPlus,
+  LogIn,
+  CheckCircle2
+} from 'lucide-react';
 import { FIRMS } from '../constants/firms';
 
-export default function FirmSelectionScreen({ onSelectFirm }) {
+export default function FirmSelectionScreen({ 
+  user = null,
+  lastFirm = null,
+  onSelectFirm, 
+  onBackToAuth,
+  onBackToDashboard
+}) {
   const firmList = Object.values(FIRMS);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white flex flex-col justify-between p-4 sm:p-8">
-      {/* Top Header */}
-      <header className="max-w-6xl mx-auto w-full pt-4 sm:pt-8 text-center">
+      {/* Top Navigation Bar with Back to Login/Signup */}
+      <div className="max-w-6xl mx-auto w-full pt-2 flex flex-wrap items-center justify-between gap-3">
+        {/* Back to Login Button */}
+        <button
+          type="button"
+          onClick={() => onBackToAuth && onBackToAuth('login')}
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900/95 border border-slate-700 hover:border-amber-400 text-slate-100 hover:text-white text-xs font-bold transition shadow-lg cursor-pointer group hover:bg-slate-800"
+          title="Go back to previous Login / Sign In page"
+        >
+          <ArrowLeft className="w-4 h-4 text-amber-400 group-hover:-translate-x-1 transition-transform" />
+          <span>← Back to Previous Login / Sign In</span>
+        </button>
+
+        <div className="flex items-center gap-2">
+          {user ? (
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-950/70 border border-emerald-700/60 text-emerald-300 text-xs">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Signed in: <strong>{user.first_name || user.name || user.email}</strong></span>
+              {onBackToDashboard && (
+                <button
+                  type="button"
+                  onClick={onBackToDashboard}
+                  className="ml-1 text-amber-400 hover:text-amber-300 font-bold underline cursor-pointer"
+                >
+                  Dashboard →
+                </button>
+              )}
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => onBackToAuth && onBackToAuth('signup')}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800/90 border border-slate-700 hover:border-amber-400 text-amber-300 hover:text-amber-200 text-xs font-bold transition shadow cursor-pointer hover:bg-slate-700"
+              title="Create new employee account"
+            >
+              <UserPlus className="w-3.5 h-3.5 text-amber-400" />
+              <span>New User? Sign Up</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Main Header */}
+      <header className="max-w-6xl mx-auto w-full pt-6 text-center">
         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-800/80 border border-slate-700/80 text-amber-400 text-xs font-semibold uppercase tracking-wider mb-4 shadow-inner">
           <Sparkles className="w-3.5 h-3.5" />
           <span>Shashwat Group Enterprise Gateway</span>
@@ -20,6 +79,27 @@ export default function FirmSelectionScreen({ onSelectFirm }) {
         <p className="text-slate-400 text-sm sm:text-base max-w-xl mx-auto mt-2 font-medium">
           Commercial Management System for Billing, Inventory, and Transport Logistics. Select your business division to begin.
         </p>
+
+        {/* Quick Back Action Bar */}
+        <div className="mt-5 flex flex-wrap items-center justify-center gap-2.5">
+          <button
+            type="button"
+            onClick={() => onBackToAuth && onBackToAuth('login')}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-amber-500/20 border border-amber-500/50 hover:border-amber-400 text-amber-300 hover:text-white text-xs font-bold transition shadow-sm cursor-pointer"
+          >
+            <ArrowLeft className="w-3.5 h-3.5 text-amber-400" />
+            <span>Go Back to Previous Login Page</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onBackToAuth && onBackToAuth('signup')}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800/80 border border-slate-700 hover:border-slate-600 text-slate-300 hover:text-white text-xs font-semibold transition cursor-pointer"
+          >
+            <KeyRound className="w-3.5 h-3.5 text-amber-400" />
+            <span>Go to Sign Up Page</span>
+          </button>
+        </div>
       </header>
 
       {/* Main Firm Cards */}
@@ -82,7 +162,7 @@ export default function FirmSelectionScreen({ onSelectFirm }) {
                 </span>
                 <button
                   type="button"
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-black text-xs uppercase tracking-wider shadow-md group-hover:from-amber-400 group-hover:to-orange-400 transition"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-black text-xs uppercase tracking-wider shadow-md group-hover:from-amber-400 group-hover:to-orange-400 transition cursor-pointer"
                 >
                   <span>Enter Division</span>
                   <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />

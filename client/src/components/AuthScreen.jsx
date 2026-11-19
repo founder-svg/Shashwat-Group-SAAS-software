@@ -5,9 +5,15 @@ import {
 } from 'lucide-react';
 import { supabase, isConfigured } from '../config/supabaseClient';
 
-export default function AuthScreen({ firm, onBackToFirms, onLoginSuccess }) {
+export default function AuthScreen({ firm, onBackToFirms, onLoginSuccess, initialMode = 'login' }) {
   // Mode: 'login' | 'signup' | 'otp_signup' | 'forgot_password' | 'otp_reset'
-  const [mode, setMode] = useState('login');
+  const [mode, setMode] = useState(initialMode || 'login');
+
+  useEffect(() => {
+    if (initialMode) {
+      setMode(initialMode);
+    }
+  }, [initialMode]);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);

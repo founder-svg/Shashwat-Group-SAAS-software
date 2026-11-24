@@ -1,10 +1,10 @@
 import React from 'react';
-import { 
-  Building2, 
-  ArrowRight, 
-  ArrowLeft, 
-  ShieldCheck, 
-  Sparkles, 
+import {
+  Building2,
+  ArrowRight,
+  ArrowLeft,
+  ShieldCheck,
+  Sparkles,
   ExternalLink,
   KeyRound,
   UserPlus,
@@ -14,10 +14,10 @@ import {
 import { FIRMS } from '../constants/firms';
 import { SHASHWAT_WOODS_LOGO, SHASHWAT_ASHAPURA_WOODS_LOGO } from '../constants/firmLogos';
 
-export default function FirmSelectionScreen({ 
+export default function FirmSelectionScreen({
   user = null,
   lastFirm = null,
-  onSelectFirm, 
+  onSelectFirm,
   onBackToAuth,
   onBackToDashboard
 }) {
@@ -26,7 +26,7 @@ export default function FirmSelectionScreen({
   return (
     <div className="relative min-h-screen text-white flex flex-col justify-between p-4 sm:p-8 isolate overflow-hidden">
       {/* Dynamic trade background wallpaper */}
-      <div 
+      <div
         aria-hidden="true"
         className="fixed inset-0 -z-30 bg-cover bg-center transition-all duration-1000 transform scale-105"
         style={{
@@ -34,7 +34,7 @@ export default function FirmSelectionScreen({
           filter: 'brightness(0.45) saturate(1.1)',
         }}
       />
-      <div 
+      <div
         aria-hidden="true"
         className="fixed inset-0 -z-20 bg-gradient-to-br from-slate-950/85 via-slate-950/80 to-slate-950/90 backdrop-blur-[4px] pointer-events-none"
       />

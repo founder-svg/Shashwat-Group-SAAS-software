@@ -3,7 +3,7 @@
 # ==============================================================================
 
 [build]
-  command = "if [ -d \"client\" ]; then cd client; fi && npm install --legacy-peer-deps && npm run build && mkdir -p ../client/dist ../dist dist && cp -r dist/* ../client/dist/ 2>/dev/null || true && cp -r dist/* ../dist/ 2>/dev/null || true"
+  command = "node build-netlify.js"
   publish = "client/dist"
 
 [build.environment]

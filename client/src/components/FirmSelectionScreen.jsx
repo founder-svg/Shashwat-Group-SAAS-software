@@ -12,7 +12,7 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import { FIRMS } from '../constants/firms';
-import { SHASHWAT_WOODS_LOGO, SHASHWAT_ASHAPURA_WOODS_LOGO } from '../constants/firmLogos';
+import { SHASHWAT_WOODS_LOGO, SHASHWAT_ASHAPURA_WOODS_LOGO, SHASHWAT_GROUP_LOGO } from '../constants/firmLogos';
 
 export default function FirmSelectionScreen({
   user = null,
@@ -81,7 +81,19 @@ export default function FirmSelectionScreen({
       </div>
 
       {/* Main Header */}
-      <header className="max-w-6xl mx-auto w-full pt-6 text-center">
+      <header className="max-w-6xl mx-auto w-full pt-4 sm:pt-6 text-center flex flex-col items-center">
+        {/* Official Shashwat Group Master Logo Emblem */}
+        <div className="mb-4 relative group">
+          <div className="absolute -inset-1.5 bg-gradient-to-r from-amber-500/40 via-orange-500/50 to-amber-500/40 rounded-3xl blur-md opacity-75 group-hover:opacity-100 transition duration-500"></div>
+          <div className="relative p-3 rounded-2xl bg-white shadow-2xl border-2 border-amber-400/50 backdrop-blur-md flex items-center justify-center transform hover:scale-105 transition-all duration-300">
+            <img
+              src={SHASHWAT_GROUP_LOGO}
+              alt="Shashwat Group Official Seal"
+              className="h-28 sm:h-36 w-auto max-w-[220px] object-contain rounded-xl"
+            />
+          </div>
+        </div>
+
         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-800/80 border border-slate-700/80 text-amber-400 text-xs font-semibold uppercase tracking-wider mb-4 shadow-inner">
           <Sparkles className="w-3.5 h-3.5" />
           <span>Shashwat Group Enterprise Gateway</span>

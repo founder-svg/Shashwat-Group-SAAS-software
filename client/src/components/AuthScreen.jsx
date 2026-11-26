@@ -4,7 +4,7 @@ import {
   CheckCircle2, AlertCircle, Sparkles, ShieldCheck, Eye, EyeOff 
 } from 'lucide-react';
 import { supabase, isConfigured } from '../config/supabaseClient';
-import { SHASHWAT_WOODS_LOGO, SHASHWAT_ASHAPURA_WOODS_LOGO } from '../constants/firmLogos';
+import { SHASHWAT_WOODS_LOGO, SHASHWAT_ASHAPURA_WOODS_LOGO, SHASHWAT_GROUP_LOGO } from '../constants/firmLogos';
 
 export default function AuthScreen({ firm, onBackToFirms, onLoginSuccess, initialMode = 'login' }) {
   // Mode: 'login' | 'signup' | 'otp_signup' | 'forgot_password' | 'otp_reset'
@@ -294,6 +294,17 @@ export default function AuthScreen({ firm, onBackToFirms, onLoginSuccess, initia
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white flex flex-col justify-center items-center p-4">
       <div className="max-w-md w-full my-6">
+        {/* Shashwat Group Official Master Seal */}
+        <div className="flex justify-center mb-3">
+          <div className="p-2 rounded-2xl bg-white shadow-xl border border-amber-400/40 transform hover:scale-105 transition-all">
+            <img
+              src={SHASHWAT_GROUP_LOGO}
+              alt="Shashwat Group"
+              className="h-16 w-auto object-contain rounded-lg"
+            />
+          </div>
+        </div>
+
         {/* Back to Firm Selection */}
         <button
           onClick={onBackToFirms}

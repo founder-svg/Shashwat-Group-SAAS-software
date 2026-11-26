@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Printer, Download, HardDrive, ShieldCheck, FileCheck, Pencil, Eye } from 'lucide-react';
 import { clientMicroPdf } from '../utils/microPdfGenerator';
 import WhatsAppModal from './WhatsAppModal';
+import { SHASHWAT_GROUP_LOGO } from '../constants/firmLogos';
 
 export default function PrintBillModal({ isOpen, onClose, invoice, firm, onEdit }) {
   const [showWhatsApp, setShowWhatsApp] = useState(false);
@@ -214,13 +215,19 @@ export default function PrintBillModal({ isOpen, onClose, invoice, firm, onEdit 
           {/* EXACT TABLE STRUCTURE PER CLIENT SCREENSHOT */}
           {/* Top Banner: client company name */}
           <div className="border-2 border-slate-900 rounded-t-lg overflow-hidden">
-            <div className="bg-white py-3 px-4 text-center border-b-2 border-slate-900">
-              <h2 className="text-lg sm:text-xl font-black text-slate-950 uppercase tracking-wide">
-                {companyTitle}
-              </h2>
-              <p className="text-[10px] text-slate-600 font-semibold mt-0.5">
-                PLOT NO-163-164, SHOP 1-3, SN-138 NR. VENUS SOCIETY, ANTARJAL, GANDHIDHAM KUTCH GUJARAT-370205 • Mo: +91 91379 21191, 99982-55525
-              </p>
+            <div className="bg-white py-3 px-4 flex items-center justify-between border-b-2 border-slate-900 gap-3">
+              <div className="w-14 h-14 shrink-0 flex items-center justify-center p-1 border border-slate-200 rounded-lg">
+                <img src={SHASHWAT_GROUP_LOGO} alt="Shashwat Group" className="max-h-full max-w-full object-contain" />
+              </div>
+              <div className="text-center flex-1">
+                <h2 className="text-lg sm:text-xl font-black text-slate-950 uppercase tracking-wide">
+                  {companyTitle}
+                </h2>
+                <p className="text-[10px] text-slate-600 font-semibold mt-0.5">
+                  PLOT NO-163-164, SHOP 1-3, SN-138 NR. VENUS SOCIETY, ANTARJAL, GANDHIDHAM KUTCH GUJARAT-370205 • Mo: +91 91379 21191, 99982-55525
+                </p>
+              </div>
+              <div className="w-14 shrink-0 hidden sm:block"></div>
             </div>
 
             {/* DATE & INVOICE NO Row */}

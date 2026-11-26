@@ -62,6 +62,9 @@ export default function VehicleManagement({
   };
 
   const filteredVehicles = vehicles.filter((v) => {
+    if (firm?.id && v.firm_id && v.firm_id !== firm.id) {
+      return false;
+    }
     const matchesSearch = 
       v.vehicle_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       v.driver_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -70,9 +73,10 @@ export default function VehicleManagement({
     return matchesSearch && matchesStatus;
   });
 
-  const availableCount = vehicles.filter(v => v.status === 'available').length;
-  const onDeliveryCount = vehicles.filter(v => v.status === 'on_delivery').length;
-  const maintenanceCount = vehicles.filter(v => v.status === 'maintenance').length;
+  const activeVehicles = vehicles.filter(v => !firm?.id || !v.firm_id || v.firm_id === firm.id);
+  const availableCount = activeVehicles.filter(v => v.status === 'available').length;
+  const onDeliveryCount = activeVehicles.filter(v => v.status === 'on_delivery').length;
+  const maintenanceCount = activeVehicles.filter(v => v.status === 'maintenance').length;
 
   const handleCreateSubmit = (e) => {
     e.preventDefault();

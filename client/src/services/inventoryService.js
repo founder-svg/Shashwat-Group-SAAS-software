@@ -1,19 +1,26 @@
 import { supabase, isConfigured, initialDemoData } from '../config/supabaseClient';
+import { getDemoInventory, getDemoTransactions } from '../data/demoData';
 
 // Local storage cache for offline demo mode
 const LOCAL_STORAGE_KEY = 'shashwat_inventory_cache';
 const LOCAL_TRANS_KEY = 'shashwat_transactions_cache';
 
 export function getCachedItems() {
+  if (typeof window !== 'undefined' && localStorage.getItem('shashwat_factory_reset_done') === 'true') {
+    const cached = localStorage.getItem(LOCAL_STORAGE_KEY);
+    return cached ? JSON.parse(cached) : [];
+  }
   const cached = localStorage.getItem(LOCAL_STORAGE_KEY);
   if (cached) {
     try { 
       const parsed = JSON.parse(cached);
-      // Filter out any legacy mock demo items
-      return parsed.filter(i => !['e1', 'e2', 'e3'].includes(i.id));
+      const filtered = (parsed || []).filter(i => !['e1', 'e2', 'e3'].includes(i.id));
+      if (filtered.length > 0) return filtered;
     } catch (e) {}
   }
-  return [];
+  const demo = getDemoInventory();
+  saveCachedItems(demo);
+  return demo;
 }
 
 export function saveCachedItems(items) {
@@ -21,14 +28,21 @@ export function saveCachedItems(items) {
 }
 
 export function getCachedTransactions() {
+  if (typeof window !== 'undefined' && localStorage.getItem('shashwat_factory_reset_done') === 'true') {
+    const cached = localStorage.getItem(LOCAL_TRANS_KEY);
+    return cached ? JSON.parse(cached) : [];
+  }
   const cached = localStorage.getItem(LOCAL_TRANS_KEY);
   if (cached) {
     try { 
       const parsed = JSON.parse(cached);
-      return parsed.filter(t => !['t-1', 't-2'].includes(t.id));
+      const filtered = (parsed || []).filter(t => !['t-1', 't-2'].includes(t.id));
+      if (filtered.length > 0) return filtered;
     } catch (e) {}
   }
-  return [];
+  const demo = getDemoTransactions();
+  saveCachedTransactions(demo);
+  return demo;
 }
 
 export function saveCachedTransactions(list) {

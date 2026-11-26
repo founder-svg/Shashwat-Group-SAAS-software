@@ -1,16 +1,24 @@
 import { supabase, isConfigured, initialDemoData } from '../config/supabaseClient';
+import { getDemoDriveFiles } from '../data/demoData';
 
 const LOCAL_DRIVE_KEY = 'shashwat_drive_cache';
 
 function getCachedFiles() {
+  if (typeof window !== 'undefined' && localStorage.getItem('shashwat_factory_reset_done') === 'true') {
+    const cached = localStorage.getItem(LOCAL_DRIVE_KEY);
+    return cached ? JSON.parse(cached) : [];
+  }
   const cached = localStorage.getItem(LOCAL_DRIVE_KEY);
   if (cached) {
     try { 
       const parsed = JSON.parse(cached);
-      return parsed.filter(f => !['df-1', 'df-2', 'df-3'].includes(f.id));
+      const filtered = (parsed || []).filter(f => !['df-1', 'df-2', 'df-3'].includes(f.id));
+      if (filtered.length > 0) return filtered;
     } catch (e) {}
   }
-  return [];
+  const demo = getDemoDriveFiles();
+  saveCachedFiles(demo);
+  return demo;
 }
 
 function saveCachedFiles(files) {

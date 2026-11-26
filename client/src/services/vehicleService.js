@@ -1,16 +1,24 @@
 import { supabase, isConfigured } from '../config/supabaseClient';
+import { getDemoVehicles } from '../data/demoData';
 
 const LOCAL_VEHICLE_KEY = 'shashwat_vehicles_cache';
 
 export function getCachedVehicles() {
+  if (typeof window !== 'undefined' && localStorage.getItem('shashwat_factory_reset_done') === 'true') {
+    const cached = localStorage.getItem(LOCAL_VEHICLE_KEY);
+    return cached ? JSON.parse(cached) : [];
+  }
   const cached = localStorage.getItem(LOCAL_VEHICLE_KEY);
   if (cached) {
     try { 
       const parsed = JSON.parse(cached);
-      return (parsed || []).filter(v => !['v-1', 'v-2'].includes(v.id));
+      const filtered = (parsed || []).filter(v => !['v-1', 'v-2'].includes(v.id));
+      if (filtered.length > 0) return filtered;
     } catch (e) {}
   }
-  return [];
+  const demo = getDemoVehicles();
+  saveCachedVehicles(demo);
+  return demo;
 }
 
 export function saveCachedVehicles(list) {

@@ -53,16 +53,21 @@ export default function StockTransactions({
   const [whatsAppModalData, setWhatsAppModalData] = useState(null);
   const [whatsAppModalType, setWhatsAppModalType] = useState('transaction');
 
-  // Filter out any legacy demo invoices (e.g. Patel Enterprises)
+  // Filter out any legacy demo invoices and filter by active firm
   const cleanInvoices = useMemo(() => {
     return invoices.filter(inv => 
       inv &&
+      (!firm?.id || !inv.firm_id || inv.firm_id === firm.id) &&
       inv.customer_name !== 'Patel Enterprises' &&
       inv.customer_name !== 'Patel Timber Mart' &&
       inv.invoice_number !== 'INV-2026-001' &&
       !['inv-1', 'inv-demo'].includes(inv.id)
     );
-  }, [invoices]);
+  }, [invoices, firm]);
+
+  const cleanTransactions = useMemo(() => {
+    return transactions.filter(t => !firm?.id || !t.firm_id || t.firm_id === firm.id);
+  }, [transactions, firm]);
 
   // Extract 'YYYY-MM-DD' cleanly from any date representation (string, ISO, Date) in local time
   const toYMD = (val) => {
@@ -142,19 +147,19 @@ export default function StockTransactions({
   }, [cleanInvoices, todayYMD]);
 
   const todayStockIn = useMemo(() => {
-    return transactions.filter(t => t.transaction_type === 'STOCK_IN' && toYMD(t.created_at || t.transaction_date) === todayYMD);
-  }, [transactions, todayYMD]);
+    return cleanTransactions.filter(t => t.transaction_type === 'STOCK_IN' && toYMD(t.created_at || t.transaction_date) === todayYMD);
+  }, [cleanTransactions, todayYMD]);
 
   const todayStockOut = useMemo(() => {
-    return transactions.filter(t => t.transaction_type === 'STOCK_OUT' && toYMD(t.created_at || t.transaction_date) === todayYMD);
-  }, [transactions, todayYMD]);
+    return cleanTransactions.filter(t => t.transaction_type === 'STOCK_OUT' && toYMD(t.created_at || t.transaction_date) === todayYMD);
+  }, [cleanTransactions, todayYMD]);
 
   const todayVehiclesActive = useMemo(() => {
     return vehicles.filter(v => 
       cleanInvoices.some(i => toYMD(i.invoice_date || i.created_at) === todayYMD && i.vehicle_no?.trim().toUpperCase() === v.vehicle_number?.trim().toUpperCase()) ||
-      transactions.some(t => toYMD(t.created_at || t.transaction_date) === todayYMD && t.vehicle_no?.trim().toUpperCase() === v.vehicle_number?.trim().toUpperCase())
+      cleanTransactions.some(t => toYMD(t.created_at || t.transaction_date) === todayYMD && t.vehicle_no?.trim().toUpperCase() === v.vehicle_number?.trim().toUpperCase())
     );
-  }, [vehicles, cleanInvoices, transactions, todayYMD]);
+  }, [vehicles, cleanInvoices, cleanTransactions, todayYMD]);
 
   const todayTotalEntries = todayInvoices.length + todayStockIn.length + todayStockOut.length;
   const todayBilledValue = todayInvoices.reduce((sum, inv) => sum + Number(inv.total_amount || 0), 0);
@@ -163,7 +168,7 @@ export default function StockTransactions({
 
   // 1. FILTERED TRANSACTIONS (Stock In & Stock Out)
   const filteredTransactions = useMemo(() => {
-    return transactions.filter(t => {
+    return cleanTransactions.filter(t => {
       const matchesSearch = 
         t.item_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         t.reference_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||

@@ -1,25 +1,32 @@
 import { supabase, isConfigured } from '../config/supabaseClient';
 import { inventoryService } from './inventoryService';
 import { vehicleService } from './vehicleService';
+import { getDemoInvoices } from '../data/demoData';
 
 const LOCAL_INVOICE_KEY = 'shashwat_invoices_cache';
 
 function getCachedInvoices() {
+  if (typeof window !== 'undefined' && localStorage.getItem('shashwat_factory_reset_done') === 'true') {
+    const cached = localStorage.getItem(LOCAL_INVOICE_KEY);
+    return cached ? JSON.parse(cached) : [];
+  }
   const cached = localStorage.getItem(LOCAL_INVOICE_KEY);
   if (cached) {
     try { 
       const parsed = JSON.parse(cached);
-      // Clean filter to ensure zero stale mock/demo data like Patel Enterprises
-      return (parsed || []).filter(i => 
+      const filtered = (parsed || []).filter(i => 
         i && 
         i.customer_name !== 'Patel Enterprises' && 
         i.customer_name !== 'Patel Timber Mart' && 
         i.invoice_number !== 'INV-2026-001' &&
         !['inv-1', 'inv-demo', '10000000-0000-0000-0000-000000000001'].includes(i.id)
       );
+      if (filtered.length > 0) return filtered;
     } catch (e) {}
   }
-  return [];
+  const demo = getDemoInvoices();
+  saveCachedInvoices(demo);
+  return demo;
 }
 
 function saveCachedInvoices(invoices) {

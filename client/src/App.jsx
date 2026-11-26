@@ -418,12 +418,13 @@ export default function App() {
   const handleFactoryReset = async () => {
     setLoading(true);
     try {
-      // 1. Wipe local storage keys
-      localStorage.removeItem('shashwat_inventory_cache');
-      localStorage.removeItem('shashwat_transactions_cache');
-      localStorage.removeItem('shashwat_invoices_cache');
-      localStorage.removeItem('shashwat_vehicles_cache');
-      localStorage.removeItem('shashwat_drive_cache');
+      // 1. Mark factory reset as done and wipe local storage keys
+      localStorage.setItem('shashwat_factory_reset_done', 'true');
+      localStorage.setItem('shashwat_inventory_cache', '[]');
+      localStorage.setItem('shashwat_transactions_cache', '[]');
+      localStorage.setItem('shashwat_invoices_cache', '[]');
+      localStorage.setItem('shashwat_vehicles_cache', '[]');
+      localStorage.setItem('shashwat_drive_cache', '[]');
 
       // 2. If Supabase cloud database is connected, delete remote rows
       if (isConfigured && supabase) {
@@ -452,6 +453,17 @@ export default function App() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleReloadDemoData = () => {
+    localStorage.removeItem('shashwat_factory_reset_done');
+    localStorage.removeItem('shashwat_inventory_cache');
+    localStorage.removeItem('shashwat_transactions_cache');
+    localStorage.removeItem('shashwat_invoices_cache');
+    localStorage.removeItem('shashwat_vehicles_cache');
+    localStorage.removeItem('shashwat_drive_cache');
+    loadAllData();
+    alert('Shashwat Group Demo Data loaded successfully!\n\nProducts (Timber & Plywoods), registered fleet vehicles, stock inward/outward records, and commercial bills are now active.');
   };
 
   // --------------------------------------------------------------------------
@@ -550,6 +562,7 @@ export default function App() {
         onToggleDivision={handleToggleDivision}
         onLogout={handleLogout}
         onFactoryReset={handleFactoryReset}
+        onReloadDemoData={handleReloadDemoData}
         isGlowHigh={isGlowHigh}
         onToggleGlow={() => setIsGlowHigh(!isGlowHigh)}
         onOpenWhatsAppReport={() => setGlobalWhatsAppReport(true)}

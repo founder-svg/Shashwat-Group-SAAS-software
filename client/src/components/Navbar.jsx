@@ -23,6 +23,7 @@ export default function Navbar({
   onToggleDivision,
   onLogout, 
   onFactoryReset,
+  onReloadDemoData,
   isGlowHigh = true,
   onToggleGlow,
   onOpenWhatsAppReport
@@ -157,14 +158,28 @@ export default function Navbar({
               </span>
             </div>
 
+            {/* Reload Demo Data Button */}
+            {onReloadDemoData && (
+              <button
+                onClick={onReloadDemoData}
+                type="button"
+                className="px-2.5 py-1 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 text-[11px] font-bold transition flex items-center gap-1 shadow-sm"
+                title="Reload Rich Demo Data (Timber, Plywoods, Bills, Fleet)"
+              >
+                <Sparkles className="w-3 h-3 text-emerald-400" />
+                <span className="hidden lg:inline">Demo Data</span>
+              </button>
+            )}
+
             {/* Factory Reset Button */}
             <button
               onClick={handleResetClick}
               type="button"
-              className="p-1.5 rounded-lg text-slate-400 hover:text-amber-400 hover:bg-white/10 transition"
-              title="Factory Reset (Clear All Data)"
+              className="px-2.5 py-1 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 text-[11px] font-bold transition flex items-center gap-1 shadow-sm"
+              title="Factory Reset (Wipe All Records to Zero Before Client Delivery)"
             >
-              <RotateCcw className="w-3.5 h-3.5" />
+              <RotateCcw className="w-3 h-3 text-amber-400" />
+              <span className="hidden lg:inline">Factory Reset</span>
             </button>
 
             {/* Logout Button */}

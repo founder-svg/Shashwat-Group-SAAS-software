@@ -44,6 +44,10 @@ export default function Billing({
     if (inv.customer_name === 'Patel Enterprises' || inv.customer_name === 'Patel Timber Mart' || inv.invoice_number === 'INV-2026-001' || inv.id === 'inv-1') {
       return false;
     }
+    // Filter by active firm division
+    if (firm?.id && inv.firm_id && inv.firm_id !== firm.id) {
+      return false;
+    }
     const matchesSearch = 
       inv.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       inv.invoice_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||

@@ -55,16 +55,29 @@ export default function Dashboard({
     return firm?.id === 'shashwat_ashapura_woods' || firm?.name?.toLowerCase().includes('ashapura');
   }, [firm]);
 
-  // Clean invoices without legacy demo items
+  // Clean invoices without legacy demo items, filtered by firm
   const cleanInvoices = useMemo(() => {
     return invoices.filter(inv =>
       inv &&
+      (!firm?.id || !inv.firm_id || inv.firm_id === firm.id) &&
       inv.customer_name !== 'Patel Enterprises' &&
       inv.customer_name !== 'Patel Timber Mart' &&
       inv.invoice_number !== 'INV-2026-001' &&
       !['inv-1', 'inv-demo'].includes(inv.id)
     );
-  }, [invoices]);
+  }, [invoices, firm]);
+
+  const cleanTransactions = useMemo(() => {
+    return transactions.filter(t => !firm?.id || !t.firm_id || t.firm_id === firm.id);
+  }, [transactions, firm]);
+
+  const cleanVehicles = useMemo(() => {
+    return vehicles.filter(v => !firm?.id || !v.firm_id || v.firm_id === firm.id);
+  }, [vehicles, firm]);
+
+  const cleanInventory = useMemo(() => {
+    return inventory.filter(i => !firm?.id || !i.firm_id || i.firm_id === firm.id);
+  }, [inventory, firm]);
 
   // Financial aggregates
   const totalBilled = cleanInvoices.reduce((acc, i) => acc + (Number(i.total_amount) || 0), 0);
@@ -73,17 +86,17 @@ export default function Dashboard({
   const avgBill = cleanInvoices.length > 0 ? (totalBilled / cleanInvoices.length) : 0;
 
   // Inventory movements
-  const totalStockInQty = transactions
+  const totalStockInQty = cleanTransactions
     .filter(t => t.transaction_type === 'STOCK_IN')
     .reduce((acc, t) => acc + (Number(t.quantity) || 0), 0);
 
-  const totalStockOutQty = transactions
+  const totalStockOutQty = cleanTransactions
     .filter(t => t.transaction_type === 'STOCK_OUT')
     .reduce((acc, t) => acc + (Number(t.quantity) || 0), 0);
 
-  const lowStockItems = inventory.filter(i => Number(i.current_stock) <= Number(i.min_reorder_level));
-  const availableVehicles = vehicles.filter(v => v.status === 'available');
-  const onRouteVehicles = vehicles.filter(v => v.status === 'on_delivery');
+  const lowStockItems = cleanInventory.filter(i => Number(i.current_stock) <= Number(i.min_reorder_level));
+  const availableVehicles = cleanVehicles.filter(v => v.status === 'available');
+  const onRouteVehicles = cleanVehicles.filter(v => v.status === 'on_delivery');
 
   // Background asset based on firm
   const currentBgImage = isAshapura ? PLYWOOD_BG_URL : WOOD_BG_URL;

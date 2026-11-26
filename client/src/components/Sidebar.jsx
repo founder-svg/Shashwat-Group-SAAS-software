@@ -30,14 +30,14 @@ export default function Sidebar({ activeTab, setActiveTab, firm }) {
         {/* Top Left: Active Division / Firm Branding */}
         <div className="p-4 border-b border-slate-800/80 bg-slate-950/40">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-xl bg-white/5 border border-slate-700/80 p-1 flex items-center justify-center shrink-0 overflow-hidden shadow-sm">
+            <div className="w-11 h-11 rounded-full bg-white/95 border-2 border-amber-400/60 p-1 flex items-center justify-center shrink-0 overflow-hidden shadow-sm">
               <img
                 src={firm?.logo || (firm?.id === 'shashwat_ashapura_woods' ? SHASHWAT_ASHAPURA_WOODS_LOGO : SHASHWAT_WOODS_LOGO)}
                 alt={firm?.name || 'Firm Logo'}
                 onError={(e) => {
                   e.currentTarget.src = firm?.id === 'shashwat_ashapura_woods' ? SHASHWAT_ASHAPURA_WOODS_LOGO : SHASHWAT_WOODS_LOGO;
                 }}
-                className="max-h-full max-w-full object-contain rounded-lg"
+                className="max-h-full max-w-full object-contain"
               />
             </div>
             <div className="overflow-hidden">

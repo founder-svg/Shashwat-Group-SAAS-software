@@ -216,7 +216,7 @@ export default function PrintBillModal({ isOpen, onClose, invoice, firm, onEdit 
           {/* Top Banner: client company name */}
           <div className="border-2 border-slate-900 rounded-t-lg overflow-hidden">
             <div className="bg-white py-3 px-4 flex items-center justify-between border-b-2 border-slate-900 gap-3">
-              <div className="w-14 h-14 shrink-0 flex items-center justify-center p-1 border border-slate-200 rounded-lg">
+              <div className="w-14 h-14 rounded-full shrink-0 flex items-center justify-center p-1 border-2 border-amber-600/40 bg-white overflow-hidden shadow-sm">
                 <img src={SHASHWAT_GROUP_LOGO} alt="Shashwat Group" className="max-h-full max-w-full object-contain" />
               </div>
               <div className="text-center flex-1">

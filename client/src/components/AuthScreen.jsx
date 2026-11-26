@@ -294,13 +294,13 @@ export default function AuthScreen({ firm, onBackToFirms, onLoginSuccess, initia
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white flex flex-col justify-center items-center p-4">
       <div className="max-w-md w-full my-6">
-        {/* Shashwat Group Official Master Seal */}
-        <div className="flex justify-center mb-3">
-          <div className="p-2 rounded-2xl bg-white shadow-xl border border-amber-400/40 transform hover:scale-105 transition-all">
+        {/* Shashwat Group Official Master Seal - Circular Frame */}
+        <div className="flex justify-center mb-4">
+          <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-white shadow-xl border-4 border-amber-400/80 ring-4 ring-amber-400/20 p-2.5 flex items-center justify-center overflow-hidden transform hover:scale-105 transition-all">
             <img
               src={SHASHWAT_GROUP_LOGO}
               alt="Shashwat Group"
-              className="h-16 w-auto object-contain rounded-lg"
+              className="max-h-full max-w-full object-contain"
             />
           </div>
         </div>
@@ -318,14 +318,14 @@ export default function AuthScreen({ firm, onBackToFirms, onLoginSuccess, initia
         {/* Selected Firm Banner */}
         <div className="rounded-3xl bg-slate-900/90 border border-slate-800 p-6 shadow-2xl backdrop-blur-xl">
           <div className="flex items-center gap-3.5 pb-4 border-b border-slate-800">
-            <div className="w-14 h-14 rounded-xl bg-white/5 border border-slate-700/80 p-1.5 flex items-center justify-center shrink-0 overflow-hidden">
+            <div className="w-14 h-14 rounded-full bg-white/95 border-2 border-amber-400/60 p-1.5 flex items-center justify-center shrink-0 overflow-hidden shadow-sm">
               <img
                 src={firm?.logo || (firm?.id === 'shashwat_ashapura_woods' ? SHASHWAT_ASHAPURA_WOODS_LOGO : SHASHWAT_WOODS_LOGO)}
                 alt={firm?.name || 'Firm Logo'}
                 onError={(e) => {
                   e.currentTarget.src = firm?.id === 'shashwat_ashapura_woods' ? SHASHWAT_ASHAPURA_WOODS_LOGO : SHASHWAT_WOODS_LOGO;
                 }}
-                className="max-h-full max-w-full object-contain rounded-lg"
+                className="max-h-full max-w-full object-contain"
               />
             </div>
             <div className="overflow-hidden">

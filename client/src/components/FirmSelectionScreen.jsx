@@ -82,14 +82,14 @@ export default function FirmSelectionScreen({
 
       {/* Main Header */}
       <header className="max-w-6xl mx-auto w-full pt-4 sm:pt-6 text-center flex flex-col items-center">
-        {/* Official Shashwat Group Master Logo Emblem */}
+        {/* Official Shashwat Group Master Logo Emblem - Circular Medallion */}
         <div className="mb-4 relative group">
-          <div className="absolute -inset-1.5 bg-gradient-to-r from-amber-500/40 via-orange-500/50 to-amber-500/40 rounded-3xl blur-md opacity-75 group-hover:opacity-100 transition duration-500"></div>
-          <div className="relative p-3 rounded-2xl bg-white shadow-2xl border-2 border-amber-400/50 backdrop-blur-md flex items-center justify-center transform hover:scale-105 transition-all duration-300">
+          <div className="absolute -inset-2 bg-gradient-to-r from-amber-500/50 via-orange-500/60 to-amber-500/50 rounded-full blur-xl opacity-80 group-hover:opacity-100 transition duration-500"></div>
+          <div className="relative w-36 h-36 sm:w-44 sm:h-44 rounded-full bg-white shadow-2xl border-4 border-amber-400/90 ring-4 ring-amber-500/25 backdrop-blur-md flex items-center justify-center p-4 transform hover:scale-105 transition-all duration-300 overflow-hidden mx-auto">
             <img
               src={SHASHWAT_GROUP_LOGO}
               alt="Shashwat Group Official Seal"
-              className="h-28 sm:h-36 w-auto max-w-[220px] object-contain rounded-xl"
+              className="max-h-full max-w-full object-contain"
             />
           </div>
         </div>
@@ -147,15 +147,15 @@ export default function FirmSelectionScreen({
               <div className="absolute -right-20 -top-20 w-48 h-48 bg-amber-500/10 rounded-full blur-3xl group-hover:bg-amber-500/20 transition-all duration-500"></div>
 
               <div>
-                {/* Firm Logo Container */}
-                <div className="w-full h-44 sm:h-52 rounded-2xl bg-white/5 border border-slate-800/80 p-3 flex items-center justify-center overflow-hidden mb-6 group-hover:border-slate-700 transition">
+                {/* Firm Logo Container - Circular Frame */}
+                <div className="w-36 h-36 sm:w-44 sm:h-44 rounded-full mx-auto bg-white/95 border-4 border-amber-400/60 shadow-xl p-3.5 flex items-center justify-center overflow-hidden mb-6 group-hover:border-amber-400 group-hover:scale-105 group-hover:shadow-amber-500/30 transition-all duration-300 ring-4 ring-amber-400/10">
                   <img
                     src={firm.logo || (firm.id === 'shashwat_ashapura_woods' ? SHASHWAT_ASHAPURA_WOODS_LOGO : SHASHWAT_WOODS_LOGO)}
                     alt={firm.name}
                     onError={(e) => {
                       e.currentTarget.src = firm.id === 'shashwat_ashapura_woods' ? SHASHWAT_ASHAPURA_WOODS_LOGO : SHASHWAT_WOODS_LOGO;
                     }}
-                    className="max-h-full max-w-full object-contain rounded-xl shadow-md transition-transform duration-300 group-hover:scale-105"
+                    className="max-h-full max-w-full object-contain rounded-full transition-transform duration-300 group-hover:scale-105"
                   />
                 </div>
 

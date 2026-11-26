@@ -566,6 +566,12 @@ export default function App() {
         isGlowHigh={isGlowHigh}
         onToggleGlow={() => setIsGlowHigh(!isGlowHigh)}
         onOpenWhatsAppReport={() => setGlobalWhatsAppReport(true)}
+        invoices={invoices}
+        inventory={inventory}
+        vehicles={vehicles}
+        transactions={transactions}
+        setActiveTab={setActiveTab}
+        onPrintInvoice={openPrintModal}
       />
 
       {/* Top Liquid Glass Module Waterline Bar */}
